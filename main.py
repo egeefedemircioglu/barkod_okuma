@@ -76,7 +76,7 @@ def verileri_yukle():
             
         return df_s, df_u
     except Exception as e:
-        st.error(f"🚨 Tablo bulunamadı! Lütfen tablonun adının '{SHEET_NAME}' olduğundan emin olun.")
+        st.error(f"🚨 Tabloya ulaşılamadı! Linki ve paylaşım yetkisini kontrol edin. Detay: {e}")
         st.stop()
 
 def kaydet(df_stok, df_user):
@@ -94,7 +94,7 @@ def kaydet(df_stok, df_user):
         worksheet_u.update([df_user.columns.values.tolist()] + df_user.values.tolist())
         return True
     except Exception as e:
-        st.error(f"🚨 Veriler buluta kaydedilemedi! Bağlantınızı kontrol edin.")
+        st.error(f"🚨 Veriler kaydedilemedi! Detay: {e}")
         return False
 
 # --- 3. OTURUM VE HAFIZA ---
