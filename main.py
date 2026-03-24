@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from PIL import Image, ImageOps, ImageEnhance
 from pyzbar.pyzbar import decode
-import os
 import json
 import gspread
 from datetime import datetime
@@ -43,7 +42,6 @@ st.markdown("""
 @st.cache_resource
 def get_gspread_client():
     try:
-        # Streamlit Secrets'tan JSON anahtarını çek
         creds_json = st.secrets["gcp_credentials"]
         creds_dict = json.loads(creds_json)
         gc = gspread.service_account_from_dict(creds_dict)
@@ -53,7 +51,7 @@ def get_gspread_client():
         st.stop()
 
 gc = get_gspread_client()
-SHEET_NAME = "Pro_Kasa_Veriler"
+SHEET_NAME = "Pro_Kasa_Veriler" # Müşteri için kurarken burayı değiştirmeyi unutma
 
 def verileri_yukle():
     try:
@@ -78,7 +76,7 @@ def verileri_yukle():
             
         return df_s, df_u
     except Exception as e:
-        st.error(f"🚨 Tablo bulunamadı! Lütfen tablonun adının 'Pro_Kasa_Veriler' olduğundan emin olun. Detay: {e}")
+        st.error(f"🚨 Tablo bulunamadı! Lütfen tablonun adının '{SHEET_NAME}' olduğundan emin olun.")
         st.stop()
 
 def kaydet(df_stok, df_user):
@@ -96,7 +94,7 @@ def kaydet(df_stok, df_user):
         worksheet_u.update([df_user.columns.values.tolist()] + df_user.values.tolist())
         return True
     except Exception as e:
-        st.error(f"🚨 Veriler buluta kaydedilemedi! Lütfen internet bağlantınızı kontrol edin. Detay: {e}")
+        st.error(f"🚨 Veriler buluta kaydedilemedi! Bağlantınızı kontrol edin.")
         return False
 
 # --- 3. OTURUM VE HAFIZA ---
@@ -137,9 +135,9 @@ if st.sidebar.button("🔴 Güvenli Çıkış"):
 
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
+# --- SEKME 1: İŞLEMLER (KAMERA) ---
 with t1:
     st.markdown("### 📸 Barkod Tarayıcı")
-    
     secim = st.radio("Okutma Yöntemi:", ["📸 Canlı Kamera", "📁 Dosya Yükle"], horizontal=True)
     
     img_file = None
@@ -151,15 +149,12 @@ with t1:
     if img_file:
         img = Image.open(img_file)
         img_gray = ImageOps.grayscale(img)
-        
         enhancer = ImageEnhance.Contrast(img_gray)
         img_high_contrast = enhancer.enhance(2.0)
-        
         sharpness = ImageEnhance.Sharpness(img_high_contrast)
         img_sharp = sharpness.enhance(2.0)
 
         decoded = decode(img) or decode(img_gray) or decode(img_sharp)
-        
         if decoded:
             st.session_state.okunan_barkod = decoded[0].data.decode("utf-8").strip("*")
         else:
@@ -222,11 +217,50 @@ with t1:
                         df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                         if kaydet(df_stok, df_user): st.rerun()
 
+# --- SEKME 2: ENVANTER VE HIZLI DÜZENLEME ---
 with t2:
-    st.subheader("📊 Tüm Ürün Listesi (Canlı)")
-    st.dataframe(df_stok, width="stretch", hide_index=True)
+    st.subheader("📊 Canlı Envanter ve Arama")
+    
+    # Arama Filtresi
+    arama = st.text_input("🔍 Ürün Adı veya Barkod ile Ara:", "")
+    if arama:
+        mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
+        df_goster = df_stok[mask]
+    else:
+        df_goster = df_stok
+
+    st.dataframe(df_goster, width="stretch", hide_index=True)
     st.info("Bu liste Google E-Tablolar ile anlık olarak senkronize edilmektedir.")
 
+    # Sadece patrona özel hızlı güncelleme paneli
+    if st.session_state.rol == "Patron":
+        st.divider()
+        st.markdown("#### ⚡ Hızlı Fiyat ve Stok Güncelleme (Patron Özel)")
+        
+        urun_listesi = ["Seçiniz..."] + df_stok['Urun_Adi'].tolist()
+        secilen_urun_adi = st.selectbox("Düzenlemek istediğiniz ürünü seçin:", urun_listesi)
+        
+        if secilen_urun_adi != "Seçiniz...":
+            idx = df_stok.index[df_stok['Urun_Adi'] == secilen_urun_adi].tolist()[0]
+            urun_verisi = df_stok.loc[idx]
+            
+            with st.form(key=f"hizli_guncelleme"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']), min_value=0.0)
+                with c2:
+                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])), min_value=0)
+                
+                if st.form_submit_button("💾 Değişiklikleri Buluta Kaydet"):
+                    df_stok.at[idx, 'Fiyat'] = str(yeni_fiyat)
+                    df_stok.at[idx, 'Stok'] = str(yeni_stok)
+                    df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    
+                    if kaydet(df_stok, df_user):
+                        st.success(f"✅ {secilen_urun_adi} başarıyla güncellendi!")
+                        st.rerun()
+
+# --- SEKME 3: YÖNETİM ---
 with t3:
     if st.session_state.rol == "Patron":
         st.subheader("👥 Personel ve Yetki Yönetimi")
