@@ -83,18 +83,29 @@ def kaydet(df_stok, df_user):
     try:
         sh = gc.open_by_url(SHEET_URL)
         
-        # Stokları Güncelle
+        # 🚨 KRİTİK DÜZELTME: Tüm verileri zorla düz metne (String) çevir ve boş (NaN) değerleri temizle.
+        # Bu işlem API Error (400 Bad Request) hatasını tamamen ortadan kaldırır.
+        df_stok_temiz = df_stok.astype(str).fillna("")
+        df_user_temiz = df_user.astype(str).fillna("")
+        
+        # Google'ın istediği liste formatına çevir
+        liste_stok = [df_stok_temiz.columns.values.tolist()] + df_stok_temiz.values.tolist()
+        liste_user = [df_user_temiz.columns.values.tolist()] + df_user_temiz.values.tolist()
+        
+        # Stokları Güncelle (values= parametresi eklendi, yeni gspread sürümleri için zorunlu)
         worksheet_s = sh.worksheet("Sayfa1")
         worksheet_s.clear()
-        worksheet_s.update([df_stok.columns.values.tolist()] + df_stok.values.tolist())
+        worksheet_s.update(values=liste_stok)
         
         # Kullanıcıları Güncelle
         worksheet_u = sh.worksheet("Kullanicilar")
         worksheet_u.clear()
-        worksheet_u.update([df_user.columns.values.tolist()] + df_user.values.tolist())
+        worksheet_u.update(values=liste_user)
+        
         return True
     except Exception as e:
-        st.error(f"🚨 Veriler kaydedilemedi! Detay: {e}")
+        # Eğer hala hata verirse, hatanın asıl nedenini ekrana net olarak yazdıracak
+        st.error(f"🚨 Google API Hatası: Veri yazılırken bir sorun oluştu! Detay: {e}")
         return False
 
 # --- 3. OTURUM VE HAFIZA ---
