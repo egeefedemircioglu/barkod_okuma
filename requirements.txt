@@ -3,3 +3,4 @@ pandas
 Pillow
 pyzbar
 openpyxl
+gspread
