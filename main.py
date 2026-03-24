@@ -202,10 +202,13 @@ with t1:
                 with c_sat:
                     s_mik = st.number_input("Satış Adedi", 1, 1000000, 1)
                     if st.button(f"💸 {s_mik} Sat"):
-                        df_stok.loc[filtre, 'Stok'] = str(stok_n - s_mik)
-                        df_stok.loc[filtre, 'Son_satis_sayisi'] = str(s_mik)
-                        df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
-                        if kaydet(df_stok, df_user): st.balloons(); st.rerun()
+                        if s_mik > stok_n:
+                            st.error(f"⚠️ Yetersiz stok! Elinizde sadece {stok_n} adet var.")
+                        else:
+                            df_stok.loc[filtre, 'Stok'] = str(stok_n - s_mik)
+                            df_stok.loc[filtre, 'Son_satis_sayisi'] = str(s_mik)
+                            df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
+                            if kaydet(df_stok, df_user): st.balloons(); st.rerun()
                 
                 with c_ek:
                     e_mik = st.number_input("Ekleme Adedi", 1, 1000000, 1)
@@ -216,23 +219,34 @@ with t1:
                 
                 with c_fiy:
                     if st.session_state.rol == "Patron":
-                        y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']))
-                        if st.button("🏷️ Güncelle"):
-                            df_stok.loc[filtre, 'Fiyat'] = str(y_f)
-                            df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
-                            if kaydet(df_stok, df_user): st.rerun()
-                    else: st.info("Yetkiniz yok.")
-            else:
-                st.warning(f"Kayıtsız Barkod: {barkod}")
-                with st.form("yeni_urun"):
-                    y_ad = st.text_input("Ürün Adı")
-                    y_f = st.number_input("Fiyat", min_value=0.0)
-                    y_s = st.number_input("Stok", min_value=0)
-                    if st.form_submit_button("💾 Buluta Kaydet"):
-                        yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": datetime.now().strftime("%d/%m/%Y %H:%M")}])
-                        df_stok = pd.concat([df_stok, yeni], ignore_index=True)
-                        if kaydet(df_stok, df_user): st.rerun()
-
+        st.divider()
+        st.markdown("#### ⚡ Hızlı Düzenleme Paneli (Patron Özel)")
+        
+        urun_listesi = ["Seçiniz..."] + df_stok['Urun_Adi'].tolist()
+        secilen_urun_adi = st.selectbox("Düzenlemek istediğiniz ürünü seçin:", urun_listesi)
+        
+        if secilen_urun_adi != "Seçiniz...":
+            idx = df_stok.index[df_stok['Urun_Adi'] == secilen_urun_adi].tolist()[0]
+            urun_verisi = df_stok.loc[idx]
+            
+            with st.form(key=f"hizli_guncelleme"):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    yeni_isim = st.text_input("Ürün Adı", value=str(urun_verisi['Urun_Adi']))
+                with c2:
+                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']), min_value=0.0)
+                with c3:
+                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])), min_value=0)
+                
+                if st.form_submit_button("💾 Değişiklikleri Buluta Kaydet"):
+                    df_stok.at[idx, 'Urun_Adi'] = str(yeni_isim)
+                    df_stok.at[idx, 'Fiyat'] = str(yeni_fiyat)
+                    df_stok.at[idx, 'Stok'] = str(yeni_stok)
+                    df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    
+                    if kaydet(df_stok, df_user):
+                        st.success(f"✅ Ürün başarıyla güncellendi!")
+                        st.rerun()
 # --- SEKME 2: ENVANTER VE HIZLI DÜZENLEME ---
 with t2:
     st.subheader("📊 Canlı Envanter ve Arama")
