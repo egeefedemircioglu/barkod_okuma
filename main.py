@@ -51,11 +51,11 @@ def get_gspread_client():
         st.stop()
 
 gc = get_gspread_client()
-SHEET_NAME = "Pro_Kasa_Veriler" # Müşteri için kurarken burayı değiştirmeyi unutma
+SHEET_URL = "https://docs.google.com/spreadsheets/d/senin-tablonun-uzun-kodu-burada/edit"
 
 def verileri_yukle():
     try:
-        sh = gc.open(SHEET_NAME)
+        sh = gc.open_by_url(SHEET_URL)
         
         # Sayfa1 (Stoklar)
         worksheet_s = sh.worksheet("Sayfa1")
@@ -81,7 +81,7 @@ def verileri_yukle():
 
 def kaydet(df_stok, df_user):
     try:
-        sh = gc.open(SHEET_NAME)
+        sh = gc.open_by_url(SHEET_URL)
         
         # Stokları Güncelle
         worksheet_s = sh.worksheet("Sayfa1")
