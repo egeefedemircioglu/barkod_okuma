@@ -51,7 +51,9 @@ def get_gspread_client():
         st.stop()
 
 gc = get_gspread_client()
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0"
+
+# ⚠️ LİNKİ BURAYA YAPIŞTIR:
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0" 
 
 def verileri_yukle():
     try:
@@ -83,16 +85,14 @@ def kaydet(df_stok, df_user):
     try:
         sh = gc.open_by_url(SHEET_URL)
         
-        # 🚨 KRİTİK DÜZELTME: Tüm verileri zorla düz metne (String) çevir ve boş (NaN) değerleri temizle.
-        # Bu işlem API Error (400 Bad Request) hatasını tamamen ortadan kaldırır.
+        # Google API zırhı (Verileri string yapar, boşlukları temizler)
         df_stok_temiz = df_stok.astype(str).fillna("")
         df_user_temiz = df_user.astype(str).fillna("")
         
-        # Google'ın istediği liste formatına çevir
         liste_stok = [df_stok_temiz.columns.values.tolist()] + df_stok_temiz.values.tolist()
         liste_user = [df_user_temiz.columns.values.tolist()] + df_user_temiz.values.tolist()
         
-        # Stokları Güncelle (values= parametresi eklendi, yeni gspread sürümleri için zorunlu)
+        # Stokları Güncelle
         worksheet_s = sh.worksheet("Sayfa1")
         worksheet_s.clear()
         worksheet_s.update(values=liste_stok)
@@ -101,11 +101,9 @@ def kaydet(df_stok, df_user):
         worksheet_u = sh.worksheet("Kullanicilar")
         worksheet_u.clear()
         worksheet_u.update(values=liste_user)
-        
         return True
     except Exception as e:
-        # Eğer hala hata verirse, hatanın asıl nedenini ekrana net olarak yazdıracak
-        st.error(f"🚨 Google API Hatası: Veri yazılırken bir sorun oluştu! Detay: {e}")
+        st.error(f"🚨 Google API Hatası: Veri kaydedilemedi. Detay: {e}")
         return False
 
 # --- 3. OTURUM VE HAFIZA ---
@@ -139,15 +137,15 @@ if st.session_state.user is None:
     st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır (Cloud Edition)</div>', unsafe_allow_html=True)
     st.stop()
 
-# --- 5. ANA PANEL ---
+# --- 5. ANA PANEL (MOBİL UYUMLU ÜST BAR) ---
 c_bilgi, c_cikis = st.columns([3, 1])
 with c_bilgi:
-    st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
+    st.markdown(f"### 👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
 with c_cikis:
     if st.button("🔴 Çıkış", use_container_width=True):
         st.session_state.user = None; st.session_state.okunan_barkod = None; st.rerun()
 
-st.divider() # Araya şık bir çizgi çeker
+st.divider()
 
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
@@ -219,6 +217,40 @@ with t1:
                 
                 with c_fiy:
                     if st.session_state.rol == "Patron":
+                        y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']))
+                        if st.button("🏷️ Güncelle"):
+                            df_stok.loc[filtre, 'Fiyat'] = str(y_f)
+                            df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
+                            if kaydet(df_stok, df_user): st.rerun()
+                    else: st.info("Yetkiniz yok.")
+            else:
+                st.warning(f"Kayıtsız Barkod: {barkod}")
+                with st.form("yeni_urun"):
+                    y_ad = st.text_input("Ürün Adı")
+                    y_f = st.number_input("Fiyat", min_value=0.0)
+                    y_s = st.number_input("Stok", min_value=0)
+                    if st.form_submit_button("💾 Buluta Kaydet"):
+                        yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": datetime.now().strftime("%d/%m/%Y %H:%M")}])
+                        df_stok = pd.concat([df_stok, yeni], ignore_index=True)
+                        if kaydet(df_stok, df_user): st.rerun()
+
+# --- SEKME 2: ENVANTER VE HIZLI DÜZENLEME ---
+with t2:
+    st.subheader("📊 Canlı Envanter ve Arama")
+    
+    # Arama Filtresi
+    arama = st.text_input("🔍 Ürün Adı veya Barkod ile Ara:", "")
+    if arama:
+        mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
+        df_goster = df_stok[mask]
+    else:
+        df_goster = df_stok
+
+    st.dataframe(df_goster, width="stretch", hide_index=True)
+    st.info("Bu liste Google E-Tablolar ile anlık olarak senkronize edilmektedir.")
+
+    # Sadece patrona özel hızlı güncelleme paneli
+    if st.session_state.rol == "Patron":
         st.divider()
         st.markdown("#### ⚡ Hızlı Düzenleme Paneli (Patron Özel)")
         
@@ -246,48 +278,6 @@ with t1:
                     
                     if kaydet(df_stok, df_user):
                         st.success(f"✅ Ürün başarıyla güncellendi!")
-                        st.rerun()
-# --- SEKME 2: ENVANTER VE HIZLI DÜZENLEME ---
-with t2:
-    st.subheader("📊 Canlı Envanter ve Arama")
-    
-    # Arama Filtresi
-    arama = st.text_input("🔍 Ürün Adı veya Barkod ile Ara:", "")
-    if arama:
-        mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
-        df_goster = df_stok[mask]
-    else:
-        df_goster = df_stok
-
-    st.dataframe(df_goster, width="stretch", hide_index=True)
-    st.info("Bu liste Google E-Tablolar ile anlık olarak senkronize edilmektedir.")
-
-    # Sadece patrona özel hızlı güncelleme paneli
-    if st.session_state.rol == "Patron":
-        st.divider()
-        st.markdown("#### ⚡ Hızlı Fiyat ve Stok Güncelleme (Patron Özel)")
-        
-        urun_listesi = ["Seçiniz..."] + df_stok['Urun_Adi'].tolist()
-        secilen_urun_adi = st.selectbox("Düzenlemek istediğiniz ürünü seçin:", urun_listesi)
-        
-        if secilen_urun_adi != "Seçiniz...":
-            idx = df_stok.index[df_stok['Urun_Adi'] == secilen_urun_adi].tolist()[0]
-            urun_verisi = df_stok.loc[idx]
-            
-            with st.form(key=f"hizli_guncelleme"):
-                c1, c2 = st.columns(2)
-                with c1:
-                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']), min_value=0.0)
-                with c2:
-                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])), min_value=0)
-                
-                if st.form_submit_button("💾 Değişiklikleri Buluta Kaydet"):
-                    df_stok.at[idx, 'Fiyat'] = str(yeni_fiyat)
-                    df_stok.at[idx, 'Stok'] = str(yeni_stok)
-                    df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    
-                    if kaydet(df_stok, df_user):
-                        st.success(f"✅ {secilen_urun_adi} başarıyla güncellendi!")
                         st.rerun()
 
 # --- SEKME 3: YÖNETİM ---
