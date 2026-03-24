@@ -3,44 +3,32 @@ import pandas as pd
 from PIL import Image, ImageOps, ImageEnhance
 from pyzbar.pyzbar import decode
 import os
+import json
+import gspread
 from datetime import datetime
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
-st.set_page_config(page_title="Pro Kasa Elite", layout="wide")
+st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide")
 
 st.markdown("""
     <style>
-    /* Ana Arka Plan */
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
-    
-    /* GEREKSİZ BEYAZ BOŞLUKLARI SIFIRLAMA */
     .block-container { padding-top: 2rem !important; }
     [data-testid="stHeader"] { display: none; }
-
-    /* STREAMLIT FORM TASARIMI (GİRİŞ EKRANI İÇİN) */
     [data-testid="stForm"] {
-        background-color: #161b22;
-        border: 1px solid #30363d !important;
-        border-radius: 20px;
-        padding: 40px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        background-color: #161b22; border: 1px solid #30363d !important;
+        border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-
-    /* FOOTER (İMZA) */
     .footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
         background-color: rgba(13, 17, 23, 0.9); color: #8b949e;
         text-align: center; padding: 10px; font-size: 13px;
         border-top: 1px solid #30363d; backdrop-filter: blur(5px); z-index: 999;
     }
-
-    /* METRİK KARTLARI */
     div[data-testid="stMetric"] {
         background-color: #161b22; border: 1px solid #30363d;
         border-radius: 15px; padding: 15px !important; transition: 0.3s;
     }
-
-    /* MODERN BUTONLAR */
     .stButton>button, [data-testid="stFormSubmitButton"]>button {
         border-radius: 10px; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
         color: white; font-weight: bold; border: none; height: 3.5em; width: 100%; transition: 0.3s;
@@ -51,33 +39,64 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. VERİ YÖNETİMİ ---
+# --- 2. GOOGLE SHEETS BAĞLANTISI VE VERİ YÖNETİMİ ---
+@st.cache_resource
+def get_gspread_client():
+    try:
+        # Streamlit Secrets'tan JSON anahtarını çek
+        creds_json = st.secrets["gcp_credentials"]
+        creds_dict = json.loads(creds_json)
+        gc = gspread.service_account_from_dict(creds_dict)
+        return gc
+    except Exception as e:
+        st.error("🚨 Google bağlantı anahtarı (Secrets) hatalı veya eksik!")
+        st.stop()
+
+gc = get_gspread_client()
+SHEET_NAME = "Pro_Kasa_Veriler"
+
 def verileri_yukle():
-    dosya = "veriler.xlsx"
-    if not os.path.exists(dosya):
-        df_s = pd.DataFrame(columns=['Barkod', 'Urun_Adi', 'Fiyat', 'Stok', 'Son_satis_sayisi', 'Son_guncelleme_tarihi'])
-        df_u = pd.DataFrame([{"Kullanici_Adi": "Eyup", "Sifre": "1234", "Rol": "Patron"}])
-        with pd.ExcelWriter(dosya) as writer:
-            df_s.to_excel(writer, sheet_name="Sayfa1", index=False)
-            df_u.to_excel(writer, sheet_name="Kullanicilar", index=False)
+    try:
+        sh = gc.open(SHEET_NAME)
+        
+        # Sayfa1 (Stoklar)
+        worksheet_s = sh.worksheet("Sayfa1")
+        records_s = worksheet_s.get_all_records()
+        if not records_s:
+            df_s = pd.DataFrame(columns=['Barkod', 'Urun_Adi', 'Fiyat', 'Stok', 'Son_satis_sayisi', 'Son_guncelleme_tarihi'])
+        else:
+            df_s = pd.DataFrame(records_s).astype(str)
+            
+        # Kullanicilar
+        worksheet_u = sh.worksheet("Kullanicilar")
+        records_u = worksheet_u.get_all_records()
+        if not records_u:
+            df_u = pd.DataFrame([{"Kullanici_Adi": "Eyup", "Sifre": "1234", "Rol": "Patron"}])
+            worksheet_u.update([df_u.columns.values.tolist()] + df_u.values.tolist())
+        else:
+            df_u = pd.DataFrame(records_u).astype(str)
+            
         return df_s, df_u
-    
-    with pd.ExcelFile(dosya) as xls:
-        df_s = pd.read_excel(xls, "Sayfa1", dtype=str).fillna("0")
-        df_u = pd.read_excel(xls, "Kullanicilar", dtype=str).fillna("")
-    
-    for col in ['Son_satis_sayisi', 'Son_guncelleme_tarihi']:
-        if col not in df_s.columns: df_s[col] = "0"
-    return df_s, df_u
+    except Exception as e:
+        st.error(f"🚨 Tablo bulunamadı! Lütfen tablonun adının 'Pro_Kasa_Veriler' olduğundan emin olun. Detay: {e}")
+        st.stop()
 
 def kaydet(df_stok, df_user):
     try:
-        with pd.ExcelWriter("veriler.xlsx") as writer:
-            df_stok.to_excel(writer, sheet_name="Sayfa1", index=False)
-            df_user.to_excel(writer, sheet_name="Kullanicilar", index=False)
+        sh = gc.open(SHEET_NAME)
+        
+        # Stokları Güncelle
+        worksheet_s = sh.worksheet("Sayfa1")
+        worksheet_s.clear()
+        worksheet_s.update([df_stok.columns.values.tolist()] + df_stok.values.tolist())
+        
+        # Kullanıcıları Güncelle
+        worksheet_u = sh.worksheet("Kullanicilar")
+        worksheet_u.clear()
+        worksheet_u.update([df_user.columns.values.tolist()] + df_user.values.tolist())
         return True
-    except:
-        st.error("🚨 Excel dosyası açık! Lütfen kapatıp tekrar deneyin.")
+    except Exception as e:
+        st.error(f"🚨 Veriler buluta kaydedilemedi! Lütfen internet bağlantınızı kontrol edin. Detay: {e}")
         return False
 
 # --- 3. OTURUM VE HAFIZA ---
@@ -91,9 +110,9 @@ if st.session_state.user is None:
     _, col_login, _ = st.columns([1, 1.5, 1])
     with col_login:
         with st.form("login_form"):
-            st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
             st.markdown("<h1 style='text-align:center; color: #58a6ff; margin-top:0;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align:center; color: #8b949e; margin-bottom:20px;'>Lütfen giriş yapın</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align:center; color: #8b949e; margin-bottom:20px;'>Pro Kasa Elite Cloud'a Giriş Yapın</p>", unsafe_allow_html=True)
             
             k_ad = st.text_input("Kullanıcı Adı", placeholder="Kullanıcı adınız")
             k_sif = st.text_input("Şifre", type="password", placeholder="••••••••")
@@ -108,11 +127,11 @@ if st.session_state.user is None:
                 else:
                     st.error("Hatalı kullanıcı adı veya şifre!")
                     
-    st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır (Cloud Edition)</div>', unsafe_allow_html=True)
     st.stop()
 
 # --- 5. ANA PANEL ---
-st.sidebar.markdown(f"### 👤 {st.session_state.user}\n**Yetki:** {st.session_state.rol}")
+st.sidebar.markdown(f"### 👤 {st.session_state.user}\n**Yetki:** {st.session_state.rol}\n🟢 Bulut Bağlantısı Aktif")
 if st.sidebar.button("🔴 Güvenli Çıkış"):
     st.session_state.user = None; st.session_state.okunan_barkod = None; st.rerun()
 
@@ -121,7 +140,6 @@ t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 with t1:
     st.markdown("### 📸 Barkod Tarayıcı")
     
-    # KULLANICIYA KAMERA VE DOSYA YÜKLEME SEÇENEĞİ SUNUYORUZ
     secim = st.radio("Okutma Yöntemi:", ["📸 Canlı Kamera", "📁 Dosya Yükle"], horizontal=True)
     
     img_file = None
@@ -130,22 +148,16 @@ with t1:
     else:
         img_file = st.file_uploader("Galeriden barkod fotoğrafı seçin", type=['jpg','png','jpeg'])
     
-    # --- YENİ: GÖRÜNTÜ İYİLEŞTİRME VE OKUMA MOTORU ---
     if img_file:
         img = Image.open(img_file)
-        
-        # 1. Fotoğrafı Siyah-Beyaz yap
         img_gray = ImageOps.grayscale(img)
         
-        # 2. Kontrastı %200 artır (Siyah çizgileri daha siyah, beyazları daha beyaz yapar)
         enhancer = ImageEnhance.Contrast(img_gray)
         img_high_contrast = enhancer.enhance(2.0)
         
-        # 3. Keskinliği artır (Bulanıklığı azaltır)
         sharpness = ImageEnhance.Sharpness(img_high_contrast)
         img_sharp = sharpness.enhance(2.0)
 
-        # Önce orijinali, bulamazsa griyi, bulamazsa iyileştirilmişi (keskin) dene
         decoded = decode(img) or decode(img_gray) or decode(img_sharp)
         
         if decoded:
@@ -205,14 +217,15 @@ with t1:
                     y_ad = st.text_input("Ürün Adı")
                     y_f = st.number_input("Fiyat", min_value=0.0)
                     y_s = st.number_input("Stok", min_value=0)
-                    if st.form_submit_button("💾 Kaydet"):
+                    if st.form_submit_button("💾 Buluta Kaydet"):
                         yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": datetime.now().strftime("%d/%m/%Y %H:%M")}])
                         df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                         if kaydet(df_stok, df_user): st.rerun()
 
 with t2:
-    st.subheader("📊 Tüm Ürün Listesi")
+    st.subheader("📊 Tüm Ürün Listesi (Canlı)")
     st.dataframe(df_stok, width="stretch", hide_index=True)
+    st.info("Bu liste Google E-Tablolar ile anlık olarak senkronize edilmektedir.")
 
 with t3:
     if st.session_state.rol == "Patron":
@@ -245,4 +258,4 @@ with t3:
         st.error("Bu bölüm sadece Patron yetkisine açıktır.")
 
 # --- İMZA (FOOTER) ---
-st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır (Cloud Edition)</div>', unsafe_allow_html=True)
