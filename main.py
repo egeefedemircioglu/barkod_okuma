@@ -51,7 +51,7 @@ def get_gspread_client():
         st.stop()
 
 gc = get_gspread_client()
-SHEET_URL = "https://docs.google.com/spreadsheets/d/senin-tablonun-uzun-kodu-burada/edit"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0"
 
 def verileri_yukle():
     try:
