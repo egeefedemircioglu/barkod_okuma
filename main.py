@@ -59,7 +59,6 @@ def verileri_yukle():
     try:
         sh = gc.open_by_url(SHEET_URL)
         
-        # Sayfa1 (Stoklar)
         worksheet_s = sh.worksheet("Sayfa1")
         records_s = worksheet_s.get_all_records()
         if not records_s:
@@ -67,7 +66,6 @@ def verileri_yukle():
         else:
             df_s = pd.DataFrame(records_s).astype(str)
             
-        # Kullanicilar
         worksheet_u = sh.worksheet("Kullanicilar")
         records_u = worksheet_u.get_all_records()
         if not records_u:
@@ -85,19 +83,16 @@ def kaydet(df_stok, df_user):
     try:
         sh = gc.open_by_url(SHEET_URL)
         
-        # Google API zırhı (Verileri string yapar, boşlukları temizler)
         df_stok_temiz = df_stok.astype(str).fillna("")
         df_user_temiz = df_user.astype(str).fillna("")
         
         liste_stok = [df_stok_temiz.columns.values.tolist()] + df_stok_temiz.values.tolist()
         liste_user = [df_user_temiz.columns.values.tolist()] + df_user_temiz.values.tolist()
         
-        # Stokları Güncelle
         worksheet_s = sh.worksheet("Sayfa1")
         worksheet_s.clear()
         worksheet_s.update(values=liste_stok)
         
-        # Kullanıcıları Güncelle
         worksheet_u = sh.worksheet("Kullanicilar")
         worksheet_u.clear()
         worksheet_u.update(values=liste_user)
@@ -238,7 +233,6 @@ with t1:
 with t2:
     st.subheader("📊 Canlı Envanter ve Arama")
     
-    # Arama Filtresi
     arama = st.text_input("🔍 Ürün Adı veya Barkod ile Ara:", "")
     if arama:
         mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
@@ -249,7 +243,6 @@ with t2:
     st.dataframe(df_goster, width="stretch", hide_index=True)
     st.info("Bu liste Google E-Tablolar ile anlık olarak senkronize edilmektedir.")
 
-    # Sadece patrona özel hızlı güncelleme paneli
     if st.session_state.rol == "Patron":
         st.divider()
         st.markdown("#### ⚡ Hızlı Düzenleme Paneli (Patron Özel)")
@@ -261,14 +254,15 @@ with t2:
             idx = df_stok.index[df_stok['Urun_Adi'] == secilen_urun_adi].tolist()[0]
             urun_verisi = df_stok.loc[idx]
             
-            with st.form(key=f"hizli_guncelleme"):
+            with st.form(key=f"hizli_guncelleme_{idx}"):
                 c1, c2, c3 = st.columns(3)
                 with c1:
                     yeni_isim = st.text_input("Ürün Adı", value=str(urun_verisi['Urun_Adi']))
                 with c2:
-                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']), min_value=0.0)
+                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']))
                 with c3:
-                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])), min_value=0)
+                    # min_value kısıtlamasını sildik, artık eksi stokları da gösterir ve düzeltir.
+                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])))
                 
                 if st.form_submit_button("💾 Değişiklikleri Buluta Kaydet"):
                     df_stok.at[idx, 'Urun_Adi'] = str(yeni_isim)
