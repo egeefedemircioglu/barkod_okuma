@@ -129,9 +129,14 @@ if st.session_state.user is None:
     st.stop()
 
 # --- 5. ANA PANEL ---
-st.sidebar.markdown(f"### 👤 {st.session_state.user}\n**Yetki:** {st.session_state.rol}\n🟢 Bulut Bağlantısı Aktif")
-if st.sidebar.button("🔴 Güvenli Çıkış"):
-    st.session_state.user = None; st.session_state.okunan_barkod = None; st.rerun()
+c_bilgi, c_cikis = st.columns([3, 1])
+with c_bilgi:
+    st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
+with c_cikis:
+    if st.button("🔴 Çıkış", use_container_width=True):
+        st.session_state.user = None; st.session_state.okunan_barkod = None; st.rerun()
+
+st.divider() # Araya şık bir çizgi çeker
 
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
