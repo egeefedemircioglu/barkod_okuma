@@ -61,7 +61,7 @@ def kaydet(df_stok, df_user):
 # --- 3. OTURUM, HAFIZA VE EKLENTİ KURULUMU ---
 if "user" not in st.session_state: st.session_state.user = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
-if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 # Kamera yenileme anahtarı
+if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 
 
 if "veriler_cekildi" not in st.session_state:
     df_s_temp, df_u_temp = verileri_yukle()
@@ -72,9 +72,8 @@ if "veriler_cekildi" not in st.session_state:
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
-# 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ (Otomatik Oluşturulur)
-if not os.path.exists("scanner_plugin"):
-    os.mkdir("scanner_plugin")
+# 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ
+if not os.path.exists("scanner_plugin"): os.mkdir("scanner_plugin")
 with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     f.write("""
     <!DOCTYPE html>
@@ -93,8 +92,8 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
             
             var scanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: {width: 250, height: 150} }, false);
             scanner.render(function(decodedText) {
-                scanner.clear(); // Kamerayı anında kapat (okuduğunu belli et)
-                setComponentValue(decodedText); // Veriyi gizlice Python'a yolla
+                scanner.clear(); 
+                setComponentValue(decodedText); 
             });
             window.addEventListener("message", function(e) {
                 if (e.data.type === "streamlit:render") {
@@ -108,7 +107,6 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     """)
 canli_okuyucu = components.declare_component("canli_okuyucu", path="scanner_plugin")
 
-
 # --- 4. GİRİŞ EKRANI ---
 if st.session_state.user is None:
     _, col_login, _ = st.columns([1, 1.5, 1])
@@ -116,10 +114,8 @@ if st.session_state.user is None:
         with st.form("login_form"):
             st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
             st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
-            
             k_ad = st.text_input("Kullanıcı Adı")
             k_sif = st.text_input("Şifre", type="password")
-            
             if st.form_submit_button("Giriş"):
                 match = df_user[(df_user['Kullanici_Adi'] == k_ad) & (df_user['Sifre'] == k_sif)]
                 if not match.empty:
@@ -141,21 +137,16 @@ with c_cikis:
 st.divider()
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
-# --- SEKME 1: WHATSAPP WEB TARZI CANLI OKUYUCU ---
+# --- SEKME 1: İŞLEMLER ---
 with t1:
     st.markdown("### 📸 Canlı Barkod Tarayıcı")
-    
     if st.session_state.okunan_barkod is None:
-        st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun. Otomatik algılayacaktır.")
-        
-        # Kamera burada çalışır ve okuduğu değeri "okunan" değişkenine atar
+        st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun.")
         okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
-        
         if okunan:
             st.session_state.okunan_barkod = okunan
-            st.session_state.scanner_key += 1 # Bir sonraki okuma için kamerayı sıfırla
-            st.rerun() # Sayfayı yenileyip ürünü göster
-            
+            st.session_state.scanner_key += 1 
+            st.rerun() 
     else:
         barkod = st.session_state.okunan_barkod
         filtre = df_stok['Barkod'] == barkod
@@ -165,18 +156,17 @@ with t1:
             u = urun.iloc[0]
             st.success(f"✅ Barkod Başarıyla Okundu!")
             st.subheader(f"📦 {u['Urun_Adi']} ({barkod})")
-            
             stok_n = int(float(u['Stok']))
             m1, m2 = st.columns(2)
             m1.metric("💰 Fiyat", f"{u['Fiyat']} TL")
             m2.metric("📦 Stok", f"{stok_n} Adet")
             st.divider()
-            
             now = datetime.now().strftime("%d/%m/%Y %H:%M")
-            c_sat, c_ek = st.columns(2)
             
+            # Geri Eklenen 3'lü Sütun (Sat - Ekle - Fiyat Güncelle)
+            c_sat, c_ek, c_fiy = st.columns(3)
             with c_sat:
-                s_mik = st.number_input("Satış Adedi", 1, value=1)
+                s_mik = st.number_input("Satış", 1, value=1)
                 if st.button(f"💸 {s_mik} Sat"):
                     if s_mik > stok_n: st.error("Yetersiz stok!")
                     else:
@@ -185,17 +175,25 @@ with t1:
                         if kaydet(df_stok, df_user): 
                             st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
             with c_ek:
-                e_mik = st.number_input("Ekleme Adedi", 1, value=1)
+                e_mik = st.number_input("Ekle", 1, value=1)
                 if st.button(f"➕ {e_mik} Ekle"):
                     df_stok.loc[filtre, 'Stok'] = str(stok_n + e_mik)
                     df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
                     if kaydet(df_stok, df_user): 
                         st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
+            with c_fiy:
+                if st.session_state.rol == "Patron":
+                    y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']))
+                    if st.button("🏷️ Güncelle"):
+                        df_stok.loc[filtre, 'Fiyat'] = str(y_f)
+                        df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = now
+                        if kaydet(df_stok, df_user): 
+                            st.session_state.df_stok = df_stok; st.rerun()
+                else: st.info("Yetkiniz yok")
                         
             st.divider()
             if st.button("🔄 Yeni Barkod Okut", use_container_width=True):
                 st.session_state.okunan_barkod = None; st.rerun()
-                
         else:
             st.warning(f"Kayıtsız Barkod: {barkod}")
             with st.form("yeni_urun"):
@@ -209,29 +207,45 @@ with t1:
             if st.button("İptal Et"):
                 st.session_state.okunan_barkod = None; st.rerun()
 
-# --- SEKME 2: ENVANTER ---
+# --- SEKME 2: ENVANTER (YENİ DİNAMİK ARAMA SİSTEMİ) ---
 with t2:
-    st.subheader("📊 Envanter")
-    arama = st.text_input("🔍 Ürün Ara:")
-    df_goster = df_stok[df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)] if arama else df_stok
+    st.subheader("📊 Envanter ve Arama")
+    arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın (Düzenlemek için):")
+    
+    if arama:
+        mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
+        df_goster = df_stok[mask]
+    else:
+        df_goster = df_stok
+
     st.dataframe(df_goster, width="stretch", hide_index=True)
 
     if st.session_state.rol == "Patron":
         st.divider()
-        st.markdown("#### ⚡ Hızlı Düzenleme")
-        secilen = st.selectbox("Ürün seçin:", ["Seçiniz..."] + df_stok['Urun_Adi'].tolist())
-        if secilen != "Seçiniz...":
-            idx = df_stok.index[df_stok['Urun_Adi'] == secilen].tolist()[0]
-            with st.form(key=f"guncelle_{idx}"):
-                c1, c2, c3 = st.columns(3)
-                with c1: y_isim = st.text_input("Ad", value=str(df_stok.loc[idx, 'Urun_Adi']))
-                with c2: y_fiyat = st.number_input("Fiyat", value=float(df_stok.loc[idx, 'Fiyat']))
-                with c3: y_stok = st.number_input("Stok", value=int(float(df_stok.loc[idx, 'Stok'])))
-                if st.form_submit_button("💾 Kaydet"):
-                    df_stok.at[idx, 'Urun_Adi'], df_stok.at[idx, 'Fiyat'], df_stok.at[idx, 'Stok'] = str(y_isim), str(y_fiyat), str(y_stok)
-                    if kaydet(df_stok, df_user): st.session_state.df_stok = df_stok; st.rerun()
+        st.markdown("#### ⚡ Bulunan Ürünleri Düzenle")
+        
+        if arama and not df_goster.empty:
+            for idx, row in df_goster.iterrows():
+                with st.form(key=f"guncelle_{idx}"):
+                    st.write(f"📦 **{row['Urun_Adi']}** ({row['Barkod']})")
+                    c1, c2, c3 = st.columns(3)
+                    with c1: y_isim = st.text_input("Ad", value=str(row['Urun_Adi']))
+                    with c2: y_fiyat = st.number_input("Fiyat", value=float(row['Fiyat']))
+                    with c3: y_stok = st.number_input("Stok", value=int(float(row['Stok'])))
+                    
+                    if st.form_submit_button("💾 Değişiklikleri Kaydet"):
+                        df_stok.at[idx, 'Urun_Adi'] = str(y_isim)
+                        df_stok.at[idx, 'Fiyat'] = str(y_fiyat)
+                        df_stok.at[idx, 'Stok'] = str(y_stok)
+                        df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                        if kaydet(df_stok, df_user): 
+                            st.session_state.df_stok = df_stok; st.rerun()
+        elif not arama:
+            st.info("👆 Ürünleri hızlıca düzenlemek için yukarıdaki arama kutusuna ürün adını yazın.")
+        else:
+            st.warning("Aradığınız ürün bulunamadı.")
 
-# --- SEKME 3: YÖNETİM ---
+# --- SEKME 3: YÖNETİM (Geri Eklenen Tam Liste) ---
 with t3:
     if st.session_state.rol == "Patron":
         st.subheader("👥 Personel Yönetimi")
@@ -241,4 +255,23 @@ with t3:
             if st.button("Kaydet"):
                 df_user = pd.concat([df_user, pd.DataFrame([{"Kullanici_Adi": nu_ad, "Sifre": nu_sif, "Rol": nu_rol}])], ignore_index=True)
                 if kaydet(df_stok, df_user): st.session_state.df_user = df_user; st.rerun()
+                
+        st.divider()
+        st.markdown("#### 🔑 Mevcut Personeller")
+        # Geri Eklenen Personel Listesi ve Şifre Düzenleme Döngüsü
+        for idx, row in df_user.iterrows():
+            cad, cps, csl = st.columns([2,2,1])
+            cad.write(f"**{row['Kullanici_Adi']}** ({row['Rol']})")
+            n_ps = cps.text_input("Yeni Şifre", key=f"pw_{idx}")
+            if cps.button("Güncelle", key=f"btn_up_{idx}"):
+                df_user.at[idx, 'Sifre'] = n_ps
+                if kaydet(df_stok, df_user): 
+                    st.session_state.df_user = df_user
+                    st.success("Güncellendi"); st.rerun()
+            
+            if row['Kullanici_Adi'] != st.session_state.user:
+                if csl.button("❌ Sil", key=f"btn_del_{idx}"):
+                    df_user = df_user.drop(idx)
+                    if kaydet(df_stok, df_user): 
+                        st.session_state.df_user = df_user; st.rerun()
     else: st.error("Yetkiniz yok.")
