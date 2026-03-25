@@ -3,7 +3,6 @@ import pandas as pd
 import json
 import gspread
 from datetime import datetime
-from streamlit_barcode_reader import barcode_reader  # YENİ CANLI OKUMA MOTORUMUZ 🚀
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
 st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide")
