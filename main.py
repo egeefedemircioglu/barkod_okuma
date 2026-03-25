@@ -53,7 +53,7 @@ def get_gspread_client():
 gc = get_gspread_client()
 
 # ⚠️ LİNKİ BURAYA YAPIŞTIR:
-SHEET_URL = "BURAYA_KENDI_LINKINI_YAPISTIR" 
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=516796671#gid=516796671" 
 
 def verileri_yukle():
     try:
