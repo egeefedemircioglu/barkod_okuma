@@ -1,6 +1,5 @@
 streamlit
 pandas
-Pillow
-pyzbar
-openpyxl
 gspread
+Pillow
+streamlit-barcode-reader
