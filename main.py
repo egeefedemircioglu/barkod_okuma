@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import gspread
 from datetime import datetime
+import os
 import streamlit.components.v1 as components
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
@@ -57,14 +58,10 @@ def kaydet(df_stok, df_user):
     sh.worksheet("Kullanicilar").update(values=[df_user_temiz.columns.values.tolist()] + df_user_temiz.values.tolist())
     return True
 
-# --- 3. OTURUM VE AKILLI HAFIZA ---
+# --- 3. OTURUM, HAFIZA VE EKLENTİ KURULUMU ---
 if "user" not in st.session_state: st.session_state.user = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
-
-# 🚨 SİHİRLİ BAĞLANTI: JS'den gelen barkodu URL'den yakala
-if "barkod" in st.query_params:
-    st.session_state.okunan_barkod = st.query_params["barkod"]
-    st.query_params.clear() # Döngüye girmemesi için URL'yi temizle
+if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 # Kamera yenileme anahtarı
 
 if "veriler_cekildi" not in st.session_state:
     df_s_temp, df_u_temp = verileri_yukle()
@@ -74,6 +71,43 @@ if "veriler_cekildi" not in st.session_state:
 
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
+
+# 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ (Otomatik Oluşturulur)
+if not os.path.exists("scanner_plugin"):
+    os.mkdir("scanner_plugin")
+with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
+    f.write("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #161b22;">
+        <div id="reader" style="width: 100%; border-radius: 15px; border: 2px solid #30363d; background: white;"></div>
+        <script>
+            function sendToPython(type, data) {
+                window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
+            }
+            function init() { sendToPython("streamlit:componentReady", {apiVersion: 1}); }
+            function setComponentValue(value) { sendToPython("streamlit:setComponentValue", {value: value}); }
+            
+            var scanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: {width: 250, height: 150} }, false);
+            scanner.render(function(decodedText) {
+                scanner.clear(); // Kamerayı anında kapat (okuduğunu belli et)
+                setComponentValue(decodedText); // Veriyi gizlice Python'a yolla
+            });
+            window.addEventListener("message", function(e) {
+                if (e.data.type === "streamlit:render") {
+                    sendToPython("streamlit:setFrameHeight", {height: 450});
+                }
+            });
+            init();
+        </script>
+    </body>
+    </html>
+    """)
+canli_okuyucu = components.declare_component("canli_okuyucu", path="scanner_plugin")
+
 
 # --- 4. GİRİŞ EKRANI ---
 if st.session_state.user is None:
@@ -91,7 +125,7 @@ if st.session_state.user is None:
                 if not match.empty:
                     st.session_state.user, st.session_state.rol = k_ad, match.iloc[0]['Rol']
                     st.rerun()
-                else: st.error("Hata!")
+                else: st.error("Hatalı Giriş!")
     st.stop()
 
 # --- 5. ANA PANEL ---
@@ -114,24 +148,14 @@ with t1:
     if st.session_state.okunan_barkod is None:
         st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun. Otomatik algılayacaktır.")
         
-        # Telefonun işlemcisini kullanan o harika JS Kodu
-        html_code = """
-        <div id="reader" style="width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #30363d;"></div>
-        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-        <script>
-            function onScanSuccess(decodedText, decodedResult) {
-                html5QrcodeScanner.clear(); // Kamerayı hemen kapat (Şarj yemesin)
-                window.parent.location.search = "?barkod=" + decodedText; // Sadece sayıyı Python'a fırlat
-            }
-            let html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader",
-                { fps: 15, qrbox: {width: 250, height: 150} },
-                false);
-            html5QrcodeScanner.render(onScanSuccess);
-        </script>
-        """
-        components.html(html_code, height=450)
+        # Kamera burada çalışır ve okuduğu değeri "okunan" değişkenine atar
+        okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
         
+        if okunan:
+            st.session_state.okunan_barkod = okunan
+            st.session_state.scanner_key += 1 # Bir sonraki okuma için kamerayı sıfırla
+            st.rerun() # Sayfayı yenileyip ürünü göster
+            
     else:
         barkod = st.session_state.okunan_barkod
         filtre = df_stok['Barkod'] == barkod
