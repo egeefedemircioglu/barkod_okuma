@@ -72,7 +72,7 @@ if "veriler_cekildi" not in st.session_state:
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
-# 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ
+# 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ (BİP SESİ EKLENDİ)
 if not os.path.exists("scanner_plugin"): os.mkdir("scanner_plugin")
 with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     f.write("""
@@ -84,6 +84,22 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     <body style="margin: 0; padding: 0; background-color: #161b22;">
         <div id="reader" style="width: 100%; border-radius: 15px; border: 2px solid #30363d; background: white;"></div>
         <script>
+            // SİHİRLİ BİP SESİ MOTORU
+            function playBeep() {
+                try {
+                    var context = new (window.AudioContext || window.webkitAudioContext)();
+                    var osc = context.createOscillator();
+                    var gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = "sine";
+                    osc.frequency.value = 880; // Bip tınısı (880 Hz tam market kasası sesidir)
+                    gain.gain.value = 0.1; // Ses seviyesi
+                    osc.start();
+                    osc.stop(context.currentTime + 0.15); // 0.15 saniye çal ve sus
+                } catch(e) {}
+            }
+
             function sendToPython(type, data) {
                 window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
             }
@@ -92,6 +108,7 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
             
             var scanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: {width: 250, height: 150} }, false);
             scanner.render(function(decodedText) {
+                playBeep(); // BARKOD OKUNDUĞU AN BİP SESİNİ PATLAT!
                 scanner.clear(); 
                 setComponentValue(decodedText); 
             });
