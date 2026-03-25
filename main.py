@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from PIL import Image, ImageOps, ImageEnhance
+from pyzbar.pyzbar import decode
 import json
 import gspread
 from datetime import datetime
@@ -51,7 +53,7 @@ def get_gspread_client():
 gc = get_gspread_client()
 
 # ⚠️ LİNKİ BURAYA YAPIŞTIR:
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0" 
+SHEET_URL = "BURAYA_KENDI_LINKINI_YAPISTIR" 
 
 def verileri_yukle():
     try:
@@ -74,7 +76,7 @@ def verileri_yukle():
             
         return df_s, df_u
     except Exception as e:
-        st.error(f"🚨 Tabloya ulaşılamadı! Linki ve paylaşım yetkisini kontrol edin. Detay: {e}")
+        st.error(f"🚨 Tabloya ulaşılamadı! Detay: {e}")
         st.stop()
 
 def kaydet(df_stok, df_user):
@@ -112,7 +114,7 @@ if "veriler_cekildi" not in st.session_state:
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
-# --- 4. MERKEZİ GİRİŞ EKRANI ---
+# --- 4. GİRİŞ EKRANI ---
 if st.session_state.user is None:
     _, col_login, _ = st.columns([1, 1.5, 1])
     with col_login:
@@ -133,11 +135,10 @@ if st.session_state.user is None:
                     st.rerun()
                 else:
                     st.error("Hatalı kullanıcı adı veya şifre!")
-                    
     st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır (Cloud Edition)</div>', unsafe_allow_html=True)
     st.stop()
 
-# --- 5. ANA PANEL (MOBİL UYUMLU ÜST BAR VE YENİLE BUTONU) ---
+# --- 5. ANA PANEL ---
 c_bilgi, c_yenile, c_cikis = st.columns([2, 1, 1])
 with c_bilgi:
     st.markdown(f"### 👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
@@ -156,17 +157,38 @@ st.divider()
 
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
-# --- SEKME 1: İŞLEMLER (YENİ NESİL CANLI KAMERA) ---
+# --- SEKME 1: İŞLEMLER (Sıkıştırmalı Kamera Motoru) ---
 with t1:
-    st.markdown("### 📸 Canlı Barkod Tarayıcı")
-    st.info("💡 Kamerayı barkoda doğru tutun, saniyeler içinde otomatik olarak algılanacaktır. (Fotoğraf çekmenize gerek yok)")
+    st.markdown("### 📸 Barkod Tarayıcı")
+    secim = st.radio("Okutma Yöntemi:", ["📸 Canlı Kamera", "📁 Dosya Yükle"], horizontal=True)
     
-    # Yeni Canlı Okuyucu Motorunu Çağırıyoruz
-    okunan_deger = barcode_reader()
+    img_file = None
+    if secim == "📸 Canlı Kamera":
+        img_file = st.camera_input("Barkodu kameraya gösterin ve çekin")
+    else:
+        img_file = st.file_uploader("Galeriden barkod fotoğrafı seçin", type=['jpg','png','jpeg'])
     
-    if okunan_deger:
-        st.session_state.okunan_barkod = okunan_deger
+    if img_file:
+        img = Image.open(img_file)
         
+        # 🚨 İŞTE SİHİRLİ DOKUNUŞ: Görüntüyü Sıkıştırma
+        # Bu satır, devasa fotoğrafları küçülterek eski nesil motorun barkodu anında görmesini sağlar.
+        img.thumbnail((800, 800))
+        
+        img_gray = ImageOps.grayscale(img)
+        enhancer = ImageEnhance.Contrast(img_gray)
+        img_high_contrast = enhancer.enhance(2.0)
+        
+        # Sıkıştırılmış farklı versiyonlarda barkodu ara
+        decoded = decode(img) or decode(img_gray) or decode(img_high_contrast)
+        
+        if decoded:
+            st.session_state.okunan_barkod = decoded[0].data.decode("utf-8").strip("*")
+        else:
+            # Okuma başarısız olursa API'yi yorma, sadece uyarı ver!
+            st.session_state.okunan_barkod = None
+            st.warning("⚠️ Barkod net algılanamadı! Lütfen telefonu biraz uzaklaştırıp netlemesini bekleyerek çekin.")
+
     if st.session_state.okunan_barkod:
         barkod = st.session_state.okunan_barkod
         filtre = df_stok['Barkod'] == barkod
@@ -220,9 +242,9 @@ with t1:
                             st.session_state.df_stok = df_stok
                             st.rerun()
                 else: st.info("Yetkiniz yok.")
-            
+                
             st.divider()
-            if st.button("🔄 Yeni Ürün Okut"):
+            if st.button("🔄 Ekranı Temizle / Yeni Ürün"):
                 st.session_state.okunan_barkod = None
                 st.rerun()
                 
@@ -239,15 +261,13 @@ with t1:
                         st.session_state.df_stok = df_stok
                         st.session_state.okunan_barkod = None
                         st.rerun()
-            
-            if st.button("🔄 İptal ve Yeniden Okut"):
+            if st.button("İptal Et"):
                 st.session_state.okunan_barkod = None
                 st.rerun()
 
 # --- SEKME 2: ENVANTER VE HIZLI DÜZENLEME ---
 with t2:
     st.subheader("📊 Canlı Envanter ve Arama")
-    
     arama = st.text_input("🔍 Ürün Adı veya Barkod ile Ara:", "")
     if arama:
         mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
@@ -256,12 +276,10 @@ with t2:
         df_goster = df_stok
 
     st.dataframe(df_goster, width="stretch", hide_index=True)
-    st.info("Bu liste cihazın hafızasından gelmektedir. En güncel hali için 'Verileri Yenile' butonunu kullanabilirsiniz.")
 
     if st.session_state.rol == "Patron":
         st.divider()
         st.markdown("#### ⚡ Hızlı Düzenleme Paneli (Patron Özel)")
-        
         urun_listesi = ["Seçiniz..."] + df_stok['Urun_Adi'].tolist()
         secilen_urun_adi = st.selectbox("Düzenlemek istediğiniz ürünü seçin:", urun_listesi)
         
@@ -271,29 +289,23 @@ with t2:
             
             with st.form(key=f"hizli_guncelleme_{idx}"):
                 c1, c2, c3 = st.columns(3)
-                with c1:
-                    yeni_isim = st.text_input("Ürün Adı", value=str(urun_verisi['Urun_Adi']))
-                with c2:
-                    yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']))
-                with c3:
-                    yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])))
+                with c1: yeni_isim = st.text_input("Ürün Adı", value=str(urun_verisi['Urun_Adi']))
+                with c2: yeni_fiyat = st.number_input("Yeni Fiyat (TL)", value=float(urun_verisi['Fiyat']))
+                with c3: yeni_stok = st.number_input("Yeni Stok", value=int(float(urun_verisi['Stok'])))
                 
-                if st.form_submit_button("💾 Değişiklikleri Buluta Kaydet"):
+                if st.form_submit_button("💾 Buluta Kaydet"):
                     df_stok.at[idx, 'Urun_Adi'] = str(yeni_isim)
                     df_stok.at[idx, 'Fiyat'] = str(yeni_fiyat)
                     df_stok.at[idx, 'Stok'] = str(yeni_stok)
                     df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    
                     if kaydet(df_stok, df_user):
                         st.session_state.df_stok = df_stok
-                        st.success(f"✅ Ürün başarıyla güncellendi!")
-                        st.rerun()
+                        st.success("Güncellendi!"); st.rerun()
 
 # --- SEKME 3: YÖNETİM ---
 with t3:
     if st.session_state.rol == "Patron":
         st.subheader("👥 Personel ve Yetki Yönetimi")
-        
         with st.expander("➕ Yeni Personel Ekle"):
             ca, cb, cc = st.columns(3)
             nu_ad = ca.text_input("Kullanıcı Adı")
@@ -305,26 +317,21 @@ with t3:
                 if kaydet(df_stok, df_user): 
                     st.session_state.df_user = df_user
                     st.rerun()
-        
         st.divider()
         for idx, row in df_user.iterrows():
             cad, cps, csl = st.columns([2,2,1])
             cad.write(f"**{row['Kullanici_Adi']}** ({row['Rol']})")
-            n_ps = cps.text_input("Yeni Şifre", key=f"pw_{idx}", placeholder="Şifre Değiştir")
+            n_ps = cps.text_input("Yeni Şifre", key=f"pw_{idx}")
             if cps.button("Güncelle", key=f"btn_up_{idx}"):
                 df_user.at[idx, 'Sifre'] = n_ps
                 if kaydet(df_stok, df_user): 
                     st.session_state.df_user = df_user
                     st.success("Güncellendi"); st.rerun()
-            
             if row['Kullanici_Adi'] != st.session_state.user:
-                if csl.button("❌ Sil", key=f"btn_del_{idx}", type="secondary"):
+                if csl.button("❌ Sil", key=f"btn_del_{idx}"):
                     df_user = df_user.drop(idx)
                     if kaydet(df_stok, df_user): 
                         st.session_state.df_user = df_user
                         st.rerun()
     else:
         st.error("Bu bölüm sadece Patron yetkisine açıktır.")
-
-# --- İMZA (FOOTER) ---
-st.markdown('<div class="footer">Ege Demircioğlu tarafından yapılmıştır (Cloud Edition)</div>', unsafe_allow_html=True)
