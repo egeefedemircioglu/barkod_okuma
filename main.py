@@ -225,8 +225,26 @@ with t1:
                 st.session_state.okunan_barkod = None; st.rerun()
 
 # --- SEKME 2: ENVANTER (YENİ DİNAMİK ARAMA SİSTEMİ) ---
-with t2:
+ith t2:
     st.subheader("📊 Envanter ve Canlı Düzenleme")
+    
+    # 🚨 YENİ EKLENEN: TOPLAM SERMAYE VE ÖZET PANELİ
+    try:
+        # Fiyat ve Stok sütunlarını geçici olarak sayıya çevirip çarpıyoruz
+        toplam_sermaye = (pd.to_numeric(df_stok['Fiyat'], errors='coerce').fillna(0) * pd.to_numeric(df_stok['Stok'], errors='coerce').fillna(0)).sum()
+        toplam_cesit = len(df_stok)
+        toplam_adet = pd.to_numeric(df_stok['Stok'], errors='coerce').fillna(0).sum()
+    except:
+        toplam_sermaye, toplam_cesit, toplam_adet = 0.0, 0, 0
+
+    # Şık metrik kartları oluşturuyoruz
+    cm1, cm2, cm3 = st.columns(3)
+    cm1.metric("💰 Dükkandaki Toplam Sermaye", f"{toplam_sermaye:,.2f} TL")
+    cm2.metric("📦 Toplam Ürün Adedi", f"{int(toplam_adet)} Adet")
+    cm3.metric("🏷️ Ürün Çeşidi", f"{toplam_cesit} Kalem")
+    
+    st.divider()
+
     arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın:")
     
     if arama:
@@ -276,6 +294,8 @@ with t2:
                 st.success("✅ Fiyatlar güncellendi ve silinen ürünler başarıyla kaldırıldı!")
                 st.rerun()
     else:
+        # Çalışanlar (Personel) tabloyu sadece görebilir, düzenleyemez
+        st.dataframe(df_goster, width="stretch", hide_index=True)
         # Çalışanlar (Personel) tabloyu sadece görebilir, düzenleyemez
         st.dataframe(df_goster, width="stretch", hide_index=True)
 # --- SEKME 3: YÖNETİM (Geri Eklenen Tam Liste) ---
