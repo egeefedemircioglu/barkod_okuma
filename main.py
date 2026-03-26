@@ -225,7 +225,7 @@ with t1:
                 st.session_state.okunan_barkod = None; st.rerun()
 
 # --- SEKME 2: ENVANTER (YENİ DİNAMİK ARAMA SİSTEMİ) ---
-ith t2:
+with t2:
     st.subheader("📊 Envanter ve Canlı Düzenleme")
     
     # 🚨 YENİ EKLENEN: TOPLAM SERMAYE VE ÖZET PANELİ
