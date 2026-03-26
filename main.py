@@ -226,8 +226,8 @@ with t1:
 
 # --- SEKME 2: ENVANTER (YENİ DİNAMİK ARAMA SİSTEMİ) ---
 with t2:
-    st.subheader("📊 Envanter ve Arama")
-    arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın (Düzenlemek için):")
+    st.subheader("📊 Envanter ve Canlı Düzenleme")
+    arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın:")
     
     if arama:
         mask = df_stok['Urun_Adi'].str.contains(arama, case=False, na=False) | df_stok['Barkod'].str.contains(arama, case=False, na=False)
@@ -235,33 +235,49 @@ with t2:
     else:
         df_goster = df_stok
 
-    st.dataframe(df_goster, width="stretch", hide_index=True)
-
     if st.session_state.rol == "Patron":
-        st.divider()
-        st.markdown("#### ⚡ Bulunan Ürünleri Düzenle")
+        st.info("💡 **EXCEL MODU:** Hücrelere çift tıklayarak fiyat/stok değiştirebilirsiniz. Bir ürünü silmek için solundaki kutucuğu seçip klavyeden 'Delete' tuşuna (veya sağ üstteki çöp tenekesine) basın. İşiniz bitince KAYDET butonuna tıklayın.")
         
-        if arama and not df_goster.empty:
-            for idx, row in df_goster.iterrows():
-                with st.form(key=f"guncelle_{idx}"):
-                    st.write(f"📦 **{row['Urun_Adi']}** ({row['Barkod']})")
-                    c1, c2, c3 = st.columns(3)
-                    with c1: y_isim = st.text_input("Ad", value=str(row['Urun_Adi']))
-                    with c2: y_fiyat = st.number_input("Fiyat", value=float(row['Fiyat']))
-                    with c3: y_stok = st.number_input("Stok", value=int(float(row['Stok'])))
+        # SİHİRLİ TABLO: Streamlit Data Editor
+        edited_df = st.data_editor(
+            df_goster,
+            use_container_width=True,
+            num_rows="dynamic", # Satır silme özelliğini açar
+            hide_index=True,
+            disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi"], # Sistemin çökmemesi için bu sütunlar kilitli
+            key="envanter_editor"
+        )
+        
+        # Tüm değişiklikleri tek seferde buluta yollayan buton
+        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", use_container_width=True):
+            
+            # 1. Adım: Silinen ürünleri tespit et ve ana veritabanından uçur
+            orijinal_barkodlar = df_goster['Barkod'].tolist()
+            kalan_barkodlar = edited_df['Barkod'].tolist()
+            silinenler = [b for b in orijinal_barkodlar if b not in kalan_barkodlar]
+            
+            df_stok = df_stok[~df_stok['Barkod'].isin(silinenler)] # Silinenleri listeden at
+            
+            # 2. Adım: Fiyatı veya stoğu değişen ürünleri ana veritabanında güncelle
+            now = datetime.now().strftime("%d/%m/%Y %H:%M")
+            for _, row in edited_df.iterrows():
+                b = row['Barkod']
+                idx = df_stok.index[df_stok['Barkod'] == b]
+                if not idx.empty:
+                    i = idx[0]
+                    df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
+                    df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
+                    df_stok.loc[i, 'Stok'] = str(row['Stok'])
+                    df_stok.loc[i, 'Son_guncelleme_tarihi'] = now
                     
-                    if st.form_submit_button("💾 Değişiklikleri Kaydet"):
-                        df_stok.at[idx, 'Urun_Adi'] = str(y_isim)
-                        df_stok.at[idx, 'Fiyat'] = str(y_fiyat)
-                        df_stok.at[idx, 'Stok'] = str(y_stok)
-                        df_stok.at[idx, 'Son_guncelleme_tarihi'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                        if kaydet(df_stok, df_user): 
-                            st.session_state.df_stok = df_stok; st.rerun()
-        elif not arama:
-            st.info("👆 Ürünleri hızlıca düzenlemek için yukarıdaki arama kutusuna ürün adını yazın.")
-        else:
-            st.warning("Aradığınız ürün bulunamadı.")
-
+            # 3. Adım: Yeni listeyi Google'a kaydet
+            if kaydet(df_stok, df_user):
+                st.session_state.df_stok = df_stok
+                st.success("✅ Fiyatlar güncellendi ve silinen ürünler başarıyla kaldırıldı!")
+                st.rerun()
+    else:
+        # Çalışanlar (Personel) tabloyu sadece görebilir, düzenleyemez
+        st.dataframe(df_goster, width="stretch", hide_index=True)
 # --- SEKME 3: YÖNETİM (Geri Eklenen Tam Liste) ---
 with t3:
     if st.session_state.rol == "Patron":
