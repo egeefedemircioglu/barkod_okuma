@@ -49,7 +49,7 @@ def get_gspread_client():
 
 gc = get_gspread_client()
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=516796671#gid=516796671" 
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0" 
 
 def verileri_yukle():
     sh = gc.open_by_url(SHEET_URL)
