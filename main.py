@@ -197,16 +197,20 @@ with c_yenile:
 
 with c_cikis:
     if st.button("🔴 Çıkış", width="stretch"):
-        # 1. GARANTİLİ SİLME: Hem sil komutu veriyoruz, hem de içini boşaltıp ömrünü sıfırlıyoruz
-        cookie_manager.delete("kullanici_adi")
+        
+        # 1. GÜVENLİK KONTROLÜ: Çerez gerçekten var mı diye bak, varsa sil!
+        if cookie_manager.get("kullanici_adi") is not None:
+            cookie_manager.delete("kullanici_adi")
+            
+        # 2. GARANTİ (ÇİFT DİKİŞ): Çerez yoksa bile var sayıp içini boşaltıyoruz
         cookie_manager.set("kullanici_adi", "", max_age=0) 
         
-        # 2. HAFIZAYI TEMİZLE
+        # 3. HAFIZAYI TEMİZLE
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.session_state.cikis_yapildi = True
         
-        # 3. TELEFONA ZAMAN TANI: Tarayıcının çerezi gerçekten sildiğinden emin olmak için 1 saniye bekletiyoruz
+        # 4. TELEFONA ZAMAN TANI
         import time
         time.sleep(1)
         
