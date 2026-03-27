@@ -38,7 +38,7 @@ tr_timezone = pytz.timezone('Europe/Istanbul')
 def su_an():
     return datetime.now(tr_timezone).strftime("%d/%m/%Y %H:%M")
 
-# 🍪 ÇEREZ (BENİ HATIRLA) YÖNETİCİSİ (HATA VERMEYEN GÜNCEL KOD)
+# 🍪 ÇEREZ (BENİ HATIRLA) YÖNETİCİSİ
 cookie_manager = stx.CookieManager(key="cerez_yonetici")
 
 # --- 2. GOOGLE SHEETS BAĞLANTISI VE VERİ YÖNETİMİ ---
@@ -49,15 +49,16 @@ def get_gspread_client():
 
 gc = get_gspread_client()
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=0#gid=0" 
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1BxOPA_JDtFYLZqxOVK3GCW1ZBh2dINF5HnqD0TbZ4h8/edit?gid=516796671#gid=516796671" 
 
 def verileri_yukle():
     sh = gc.open_by_url(SHEET_URL)
     df_s = pd.DataFrame(sh.worksheet("Sayfa1").get_all_records()).astype(str)
     df_u = pd.DataFrame(sh.worksheet("Kullanicilar").get_all_records()).astype(str)
     
+    # Senin Excel tablonla birebir uyumlu hale getirildi
     if 'Son_satis_tarihi' not in df_s.columns: df_s['Son_satis_tarihi'] = ""
-    if 'Son_eklenme_tarihi' not in df_s.columns: df_s['Son_eklenme_tarihi'] = ""
+    if 'Son_ekleme_tarihi' not in df_s.columns: df_s['Son_ekleme_tarihi'] = ""
     
     return df_s, df_u
 
@@ -77,21 +78,18 @@ if "rol" not in st.session_state: st.session_state.rol = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
 if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 
 
-# VERİLERİ ÇEKİYORUZ (Senin yanlışlıkla sildiğin hayati kısım)
+# VERİLERİ ÇEKİYORUZ
 if "veriler_cekildi" not in st.session_state:
     df_s_temp, df_u_temp = verileri_yukle()
     st.session_state.df_stok = df_s_temp
     st.session_state.df_user = df_u_temp
     st.session_state.veriler_cekildi = True
 
-df_stok = st.session_state.df_stok
-df_user = st.session_state.df_user
-
-# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü - Çift Kayıt Hatası Çözüldü)
+# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü)
 if st.session_state.user is None:
     kayitli_kullanici = cookie_manager.get(cookie="kullanici_adi")
     if kayitli_kullanici:
-        match = df_user[df_user['Kullanici_Adi'] == kayitli_kullanici]
+        match = st.session_state.df_user[st.session_state.df_user['Kullanici_Adi'] == kayitli_kullanici]
         if not match.empty:
             st.session_state.user = kayitli_kullanici
             st.session_state.rol = match.iloc[0]['Rol']
@@ -147,7 +145,7 @@ if st.session_state.user is None:
             beni_hatirla = st.checkbox("Beni Hatırla 🍪")
             
             if st.form_submit_button("Giriş"):
-                match = df_user[(df_user['Kullanici_Adi'] == k_ad) & (df_user['Sifre'] == k_sif)]
+                match = st.session_state.df_user[(st.session_state.df_user['Kullanici_Adi'] == k_ad) & (st.session_state.df_user['Sifre'] == k_sif)]
                 if not match.empty:
                     st.session_state.user = k_ad
                     st.session_state.rol = match.iloc[0]['Rol']
@@ -157,16 +155,22 @@ if st.session_state.user is None:
                     
                     st.rerun()
                 else: st.error("Hatalı Giriş!")
-    st.stop()
+    st.stop() # Kullanıcı giriş yapmadıysa sistem burada bekler
 
-# --- 5. ANA PANEL ---
+# --- 5. ANA PANEL (SADECE GİRİŞ YAPILINCA BURAYA GEÇER) ---
+# df_stok hatası almamak için verileri burada tekrar güvenli şekilde tanımlıyoruz
+df_stok = st.session_state.df_stok
+df_user = st.session_state.df_user
+
 c_bilgi, c_yenile, c_cikis = st.columns([2, 1, 1])
 with c_bilgi: st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
+
+# Streamlit uyarısını çözmek için width="stretch" kullanıldı
 with c_yenile:
-    if st.button("🔄 Verileri Yenile", use_container_width=True):
+    if st.button("🔄 Verileri Yenile", width="stretch"):
         del st.session_state.veriler_cekildi; st.session_state.okunan_barkod = None; st.rerun()
 with c_cikis:
-    if st.button("🔴 Çıkış", use_container_width=True):
+    if st.button("🔴 Çıkış", width="stretch"):
         cookie_manager.delete("kullanici_adi")
         st.session_state.clear(); st.rerun()
 
@@ -229,7 +233,7 @@ with t1:
                 else: st.info("Yetkiniz yok")
                         
             st.divider()
-            if st.button("🔄 Yeni Barkod Okut", use_container_width=True):
+            if st.button("🔄 Yeni Barkod Okut", width="stretch"):
                 st.session_state.okunan_barkod = None; st.rerun()
         else:
             st.warning(f"Kayıtsız Barkod: {barkod}")
@@ -241,7 +245,7 @@ with t1:
                     yeni = pd.DataFrame([{
                         "Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), 
                         "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
-                        "Son_satis_tarihi": "", "Son_eklenme_tarihi": su_an() 
+                        "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
                     }])
                     df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                     if kaydet(df_stok, df_user): st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
@@ -280,12 +284,12 @@ with t2:
         st.info("💡 **EXCEL MODU:** Hücrelere çift tıklayarak fiyat/stok değiştirebilirsiniz. Silmek için satırı seçip Delete'e basın.")
         
         edited_df = st.data_editor(
-            df_goster, use_container_width=True, num_rows="dynamic", hide_index=True,
-            disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_eklenme_tarihi"],
+            df_goster, width="stretch", num_rows="dynamic", hide_index=True,
+            disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
             key="envanter_editor"
         )
         
-        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", use_container_width=True):
+        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
             orijinal_barkodlar = df_goster['Barkod'].tolist()
             kalan_barkodlar = edited_df['Barkod'].tolist()
             silinenler = [b for b in orijinal_barkodlar if b not in kalan_barkodlar]
