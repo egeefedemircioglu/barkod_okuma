@@ -56,7 +56,7 @@ def verileri_yukle():
     df_s = pd.DataFrame(sh.worksheet("Sayfa1").get_all_records()).astype(str)
     df_u = pd.DataFrame(sh.worksheet("Kullanicilar").get_all_records()).astype(str)
     
-    # Senin Excel tablonla birebir uyumlu hale getirildi
+    # Senin Excel tablonla birebir uyumlu
     if 'Son_satis_tarihi' not in df_s.columns: df_s['Son_satis_tarihi'] = ""
     if 'Son_ekleme_tarihi' not in df_s.columns: df_s['Son_ekleme_tarihi'] = ""
     
@@ -85,8 +85,8 @@ if "veriler_cekildi" not in st.session_state:
     st.session_state.df_user = df_u_temp
     st.session_state.veriler_cekildi = True
 
-# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü)
-if st.session_state.user is None:
+# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü - Hayalet Çerez Çözümü)
+if st.session_state.user is None and not st.session_state.get("cikis_yapildi", False):
     kayitli_kullanici = cookie_manager.get(cookie="kullanici_adi")
     if kayitli_kullanici:
         match = st.session_state.df_user[st.session_state.df_user['Kullanici_Adi'] == kayitli_kullanici]
@@ -150,6 +150,10 @@ if st.session_state.user is None:
                     st.session_state.user = k_ad
                     st.session_state.rol = match.iloc[0]['Rol']
                     
+                    # Giriş başarılıysa çıkış bayrağını temizle
+                    if "cikis_yapildi" in st.session_state:
+                        del st.session_state["cikis_yapildi"]
+                    
                     if beni_hatirla:
                         cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
                     
@@ -158,21 +162,24 @@ if st.session_state.user is None:
     st.stop() # Kullanıcı giriş yapmadıysa sistem burada bekler
 
 # --- 5. ANA PANEL (SADECE GİRİŞ YAPILINCA BURAYA GEÇER) ---
-# df_stok hatası almamak için verileri burada tekrar güvenli şekilde tanımlıyoruz
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
 c_bilgi, c_yenile, c_cikis = st.columns([2, 1, 1])
 with c_bilgi: st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
 
-# Streamlit uyarısını çözmek için width="stretch" kullanıldı
 with c_yenile:
     if st.button("🔄 Verileri Yenile", width="stretch"):
         del st.session_state.veriler_cekildi; st.session_state.okunan_barkod = None; st.rerun()
+
 with c_cikis:
     if st.button("🔴 Çıkış", width="stretch"):
         cookie_manager.delete("kullanici_adi")
-        st.session_state.clear(); st.rerun()
+        # Sistemi tamamen sıfırlayıp "çıkış yapıldı" notu bırakıyoruz
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state.cikis_yapildi = True
+        st.rerun()
 
 st.divider()
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
