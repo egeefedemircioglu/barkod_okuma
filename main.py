@@ -38,6 +38,7 @@ tr_timezone = pytz.timezone('Europe/Istanbul')
 def su_an():
     return datetime.now(tr_timezone).strftime("%d/%m/%Y %H:%M")
 
+# 🍪 ÇEREZ (BENİ HATIRLA) YÖNETİCİSİ (HATA VERMEYEN GÜNCEL KOD)
 cookie_manager = stx.CookieManager(key="cerez_yonetici")
 
 # --- 2. GOOGLE SHEETS BAĞLANTISI VE VERİ YÖNETİMİ ---
@@ -55,7 +56,6 @@ def verileri_yukle():
     df_s = pd.DataFrame(sh.worksheet("Sayfa1").get_all_records()).astype(str)
     df_u = pd.DataFrame(sh.worksheet("Kullanicilar").get_all_records()).astype(str)
     
-    # Eğer yeni eklediğimiz sütunlar boşsa hata vermesin diye düzeltiyoruz
     if 'Son_satis_tarihi' not in df_s.columns: df_s['Son_satis_tarihi'] = ""
     if 'Son_eklenme_tarihi' not in df_s.columns: df_s['Son_eklenme_tarihi'] = ""
     
@@ -71,49 +71,31 @@ def kaydet(df_stok, df_user):
     sh.worksheet("Kullanicilar").update(values=[df_user_temiz.columns.values.tolist()] + df_user_temiz.values.tolist())
     return True
 
-# --- 3. OTURUM, HAFIZA VE EKLENTİ KURULUMU ---
+# --- 3. OTURUM VE HAFIZA KURULUMU ---
 if "user" not in st.session_state: st.session_state.user = None
 if "rol" not in st.session_state: st.session_state.rol = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
 if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 
 
-# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü)
+# VERİLERİ ÇEKİYORUZ (Senin yanlışlıkla sildiğin hayati kısım)
+if "veriler_cekildi" not in st.session_state:
+    df_s_temp, df_u_temp = verileri_yukle()
+    st.session_state.df_stok = df_s_temp
+    st.session_state.df_user = df_u_temp
+    st.session_state.veriler_cekildi = True
+
+df_stok = st.session_state.df_stok
+df_user = st.session_state.df_user
+
+# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü - Çift Kayıt Hatası Çözüldü)
 if st.session_state.user is None:
     kayitli_kullanici = cookie_manager.get(cookie="kullanici_adi")
     if kayitli_kullanici:
-        # Sadece ismi hatırladık, yetkisini veritabanından çekiyoruz
-        if "veriler_cekildi" in st.session_state:
-            match = st.session_state.df_user[st.session_state.df_user['Kullanici_Adi'] == kayitli_kullanici]
-            if not match.empty:
-                st.session_state.user = kayitli_kullanici
-                st.session_state.rol = match.iloc[0]['Rol']
-                st.rerun()
-
-# --- 4. GİRİŞ EKRANI ---
-if st.session_state.user is None:
-    _, col_login, _ = st.columns([1, 1.5, 1])
-    with col_login:
-        with st.form("login_form"):
-            st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
-            st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
-            k_ad = st.text_input("Kullanıcı Adı")
-            k_sif = st.text_input("Şifre", type="password")
-            
-            beni_hatirla = st.checkbox("Beni Hatırla 🍪")
-            
-            if st.form_submit_button("Giriş"):
-                match = df_user[(df_user['Kullanici_Adi'] == k_ad) & (df_user['Sifre'] == k_sif)]
-                if not match.empty:
-                    st.session_state.user = k_ad
-                    st.session_state.rol = match.iloc[0]['Rol']
-                    
-                    if beni_hatirla:
-                        # ARTIK SADECE 1 TANE ÇEREZ KAYDEDİYORUZ (Çakışma yok)
-                        cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
-                    
-                    st.rerun()
-                else: st.error("Hatalı Giriş!")
-    st.stop()
+        match = df_user[df_user['Kullanici_Adi'] == kayitli_kullanici]
+        if not match.empty:
+            st.session_state.user = kayitli_kullanici
+            st.session_state.rol = match.iloc[0]['Rol']
+            st.rerun()
 
 # 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ
 if not os.path.exists("scanner_plugin"): os.mkdir("scanner_plugin")
@@ -162,7 +144,6 @@ if st.session_state.user is None:
             k_ad = st.text_input("Kullanıcı Adı")
             k_sif = st.text_input("Şifre", type="password")
             
-            # BENİ HATIRLA BUTONU
             beni_hatirla = st.checkbox("Beni Hatırla 🍪")
             
             if st.form_submit_button("Giriş"):
@@ -172,8 +153,7 @@ if st.session_state.user is None:
                     st.session_state.rol = match.iloc[0]['Rol']
                     
                     if beni_hatirla:
-                        cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) # 30 gün hatırla
-                        cookie_manager.set("kullanici_rol", st.session_state.rol, max_age=30*24*60*60)
+                        cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
                     
                     st.rerun()
                 else: st.error("Hatalı Giriş!")
@@ -187,7 +167,7 @@ with c_yenile:
         del st.session_state.veriler_cekildi; st.session_state.okunan_barkod = None; st.rerun()
 with c_cikis:
     if st.button("🔴 Çıkış", use_container_width=True):
-        cookie_manager.delete("kullanici_adi") # Sadece bunu siliyoruz
+        cookie_manager.delete("kullanici_adi")
         st.session_state.clear(); st.rerun()
 
 st.divider()
@@ -228,7 +208,7 @@ with t1:
                     else:
                         df_stok.loc[filtre, 'Stok'] = str(stok_n - s_mik)
                         df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
-                        df_stok.loc[filtre, 'Son_satis_tarihi'] = su_an() # Satış tarihini kaydet
+                        df_stok.loc[filtre, 'Son_satis_tarihi'] = su_an()
                         if kaydet(df_stok, df_user): 
                             st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
             with c_ek:
@@ -261,24 +241,22 @@ with t1:
                     yeni = pd.DataFrame([{
                         "Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), 
                         "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
-                        "Son_satis_tarihi": "", "Son_eklenme_tarihi": su_an() # Yeni eklenme tarihi işlendi
+                        "Son_satis_tarihi": "", "Son_eklenme_tarihi": su_an() 
                     }])
                     df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                     if kaydet(df_stok, df_user): st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
             if st.button("İptal Et"):
                 st.session_state.okunan_barkod = None; st.rerun()
 
-# --- SEKME 2: ENVANTER (YENİ DİNAMİK ARAMA VE SIRALAMA SİSTEMİ) ---
+# --- SEKME 2: ENVANTER ---
 with t2:
     st.subheader("📊 Envanter ve Stok Durumu")
     
-    # 🌟 SİHİR 1: En son satılanı en üste alacak şekilde sıralama
     df_goster = df_stok.copy()
     if 'Son_satis_tarihi' in df_goster.columns:
         df_goster['Siralama_Tarihi'] = pd.to_datetime(df_goster['Son_satis_tarihi'], format="%d/%m/%Y %H:%M", errors='coerce')
         df_goster = df_goster.sort_values(by='Siralama_Tarihi', ascending=False).drop(columns=['Siralama_Tarihi'])
 
-    # 🌟 SİHİR 2: Sermaye Sadece Patrona Görünür
     if st.session_state.rol == "Patron":
         try:
             toplam_sermaye = (pd.to_numeric(df_goster['Fiyat'], errors='coerce').fillna(0) * pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0)).sum()
