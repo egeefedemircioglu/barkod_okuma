@@ -38,12 +38,7 @@ tr_timezone = pytz.timezone('Europe/Istanbul')
 def su_an():
     return datetime.now(tr_timezone).strftime("%d/%m/%Y %H:%M")
 
-# 🍪 ÇEREZ (BENİ HATIRLA) YÖNETİCİSİ
-@st.cache_resource
-def get_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_manager()
+cookie_manager = stx.CookieManager(key="cerez_yonetici")
 
 # --- 2. GOOGLE SHEETS BAĞLANTISI VE VERİ YÖNETİMİ ---
 @st.cache_resource
