@@ -187,8 +187,7 @@ with c_yenile:
         del st.session_state.veriler_cekildi; st.session_state.okunan_barkod = None; st.rerun()
 with c_cikis:
     if st.button("🔴 Çıkış", use_container_width=True):
-        cookie_manager.delete("kullanici_adi") # Çıkışta çerezleri temizle
-        cookie_manager.delete("kullanici_rol")
+        cookie_manager.delete("kullanici_adi") # Sadece bunu siliyoruz
         st.session_state.clear(); st.rerun()
 
 st.divider()
