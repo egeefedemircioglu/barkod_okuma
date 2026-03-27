@@ -80,20 +80,40 @@ if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0
 # 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü)
 if st.session_state.user is None:
     kayitli_kullanici = cookie_manager.get(cookie="kullanici_adi")
-    kayitli_rol = cookie_manager.get(cookie="kullanici_rol")
-    if kayitli_kullanici and kayitli_rol:
-        st.session_state.user = kayitli_kullanici
-        st.session_state.rol = kayitli_rol
-        st.rerun()
+    if kayitli_kullanici:
+        # Sadece ismi hatırladık, yetkisini veritabanından çekiyoruz
+        if "veriler_cekildi" in st.session_state:
+            match = st.session_state.df_user[st.session_state.df_user['Kullanici_Adi'] == kayitli_kullanici]
+            if not match.empty:
+                st.session_state.user = kayitli_kullanici
+                st.session_state.rol = match.iloc[0]['Rol']
+                st.rerun()
 
-if "veriler_cekildi" not in st.session_state:
-    df_s_temp, df_u_temp = verileri_yukle()
-    st.session_state.df_stok = df_s_temp
-    st.session_state.df_user = df_u_temp
-    st.session_state.veriler_cekildi = True
-
-df_stok = st.session_state.df_stok
-df_user = st.session_state.df_user
+# --- 4. GİRİŞ EKRANI ---
+if st.session_state.user is None:
+    _, col_login, _ = st.columns([1, 1.5, 1])
+    with col_login:
+        with st.form("login_form"):
+            st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
+            k_ad = st.text_input("Kullanıcı Adı")
+            k_sif = st.text_input("Şifre", type="password")
+            
+            beni_hatirla = st.checkbox("Beni Hatırla 🍪")
+            
+            if st.form_submit_button("Giriş"):
+                match = df_user[(df_user['Kullanici_Adi'] == k_ad) & (df_user['Sifre'] == k_sif)]
+                if not match.empty:
+                    st.session_state.user = k_ad
+                    st.session_state.rol = match.iloc[0]['Rol']
+                    
+                    if beni_hatirla:
+                        # ARTIK SADECE 1 TANE ÇEREZ KAYDEDİYORUZ (Çakışma yok)
+                        cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
+                    
+                    st.rerun()
+                else: st.error("Hatalı Giriş!")
+    st.stop()
 
 # 🚨 ÖZEL CANLI OKUYUCU EKLENTİSİ
 if not os.path.exists("scanner_plugin"): os.mkdir("scanner_plugin")
