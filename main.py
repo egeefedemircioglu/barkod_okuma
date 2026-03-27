@@ -4,6 +4,7 @@ import json
 import gspread
 from datetime import datetime
 import os
+import time
 import streamlit.components.v1 as components
 import pytz
 import extra_streamlit_components as stx
@@ -175,6 +176,9 @@ if st.session_state.user is None:
                     
                     if beni_hatirla:
                         cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
+                        
+                        # BÜYÜK SIR BURADA: Telefon çerezi kaydedebilsin diye 1 saniye mola veriyoruz!
+                        time.sleep(1) 
                     
                     st.rerun()
                 else: st.error("Hatalı Giriş!")
