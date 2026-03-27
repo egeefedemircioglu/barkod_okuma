@@ -101,7 +101,14 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     f.write("""
     <!DOCTYPE html>
     <html>
-    <head><script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script></head>
+    <head>
+        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+        <style>
+            /* Kırmızı hata mesajını gizleyen kod */
+            span[style*="color: red"] { display: none !important; opacity: 0 !important; font-size: 0px !important; }
+            #reader__dashboard_section_csr span { display: none !important; }
+        </style>
+    </head>
     <body style="margin: 0; padding: 0; background-color: #161b22;">
         <div id="reader" style="width: 100%; border-radius: 15px; border: 2px solid #30363d; background: white;"></div>
         <script>
@@ -118,7 +125,19 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
             function sendToPython(type, data) { window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); }
             function init() { sendToPython("streamlit:componentReady", {apiVersion: 1}); }
             function setComponentValue(value) { sendToPython("streamlit:setComponentValue", {value: value}); }
-            var scanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: {width: 250, height: 150} }, false);
+            
+            // BARKOD TARAYICI AYARLARI (KRAL MODU)
+            var scanner = new Html5QrcodeScanner("reader", { 
+                fps: 15, 
+                qrbox: {width: 250, height: 250}, // QR için kare kutu
+                formatsToSupport: [ 
+                    Html5QrcodeSupportedFormats.QR_CODE,  // QR KOD
+                    Html5QrcodeSupportedFormats.CODE_128, // YENİ NESİL ÇİZGİ
+                    Html5QrcodeSupportedFormats.CODE_39,  // ESKİ ÇİZGİ BARKODLAR
+                    Html5QrcodeSupportedFormats.EAN_13    // HAZIR MARKET ÜRÜNLERİ
+                ]
+            }, false);
+            
             scanner.render(function(decodedText) {
                 playBeep(); scanner.clear(); setComponentValue(decodedText); 
             });
