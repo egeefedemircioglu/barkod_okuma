@@ -197,11 +197,19 @@ with c_yenile:
 
 with c_cikis:
     if st.button("🔴 Çıkış", width="stretch"):
+        # 1. GARANTİLİ SİLME: Hem sil komutu veriyoruz, hem de içini boşaltıp ömrünü sıfırlıyoruz
         cookie_manager.delete("kullanici_adi")
-        # Sistemi tamamen sıfırlayıp "çıkış yapıldı" notu bırakıyoruz
+        cookie_manager.set("kullanici_adi", "", max_age=0) 
+        
+        # 2. HAFIZAYI TEMİZLE
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.session_state.cikis_yapildi = True
+        
+        # 3. TELEFONA ZAMAN TANI: Tarayıcının çerezi gerçekten sildiğinden emin olmak için 1 saniye bekletiyoruz
+        import time
+        time.sleep(1)
+        
         st.rerun()
 
 st.divider()
