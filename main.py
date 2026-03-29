@@ -31,15 +31,23 @@ st.markdown("""
         border-radius: 10px; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
         color: white; font-weight: bold; border: none; height: 3.5em; width: 100%; transition: 0.3s;
     }
-    /* 🌟 LOGO YUVARLAKLAŞTIRMA VE ORTALAMA 🌟 */
-    [data-testid="stImage"] { display: flex; justify-content: center; margin-bottom: -10px; margin-top: 10px; }
+    /* 🌟 LOGO KUSURSUZ MERKEZLEME VE BÜYÜTME 🌟 */
+    [data-testid="stImage"] { 
+        display: flex; 
+        justify-content: center !important; /* Yatayda zorla ortala */
+        align-items: center !important; 
+        width: 100%; /* Formun tam genişliğini kullan */
+        margin-top: 15px; /* Üstten hoş bir boşluk */
+        margin-bottom: -10px; 
+    }
+    
     [data-testid="stImage"] img { 
         border-radius: 50%; 
-        width: 130px !important; 
-        height: 130px !important; 
+        width: 180px !important; /* BÜYÜTÜLDÜ (Eski: 130px) */
+        height: 180px !important; /* BÜYÜTÜLDÜ (Eski: 130px) */
         object-fit: cover; 
         border: 3px solid #58a6ff; 
-        box-shadow: 0 0 15px rgba(88, 166, 255, 0.4);
+        box-shadow: 0 0 20px rgba(88, 166, 255, 0.5); /* Işık arttırıldı */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -169,18 +177,30 @@ if st.session_state.user is None:
     with col_login:
         with st.form("login_form"):
             
-            # 🌟 LOGOYU KUSURSUZ ORTALAMAK İÇİN GÖRÜNMEZ İÇ SÜTUNLAR KULLANIYORUZ
-            _, col_logo, _ = st.columns([1, 1, 1])
-            with col_logo:
-                import os
-                if os.path.exists("logo.png"):
-                    st.image("logo.png")
-                elif os.path.exists("logo.jpg"):
-                    st.image("logo.jpg")
-                else:
-                    st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
+            # 🌟 LOGOYU DİREKT FORMA KOYUYORUZ (Merkezlemeyi CSS Hallediyor)
+            import os
+            if os.path.exists("logo.png"):
+                st.image("logo.png")
+            else:
+                # Logo yoksa bile aynı büyüklükte ve ortada duran bir UI hazırladık
+                st.markdown("""
+                    <div style='display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 15px;'>
+                        <div style='
+                            border-radius: 50%;
+                            width: 180px;
+                            height: 180px;
+                            background-color: #161b22;
+                            border: 3px solid #58a6ff;
+                            box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            font-size: 70px;
+                        '>🏪</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             
-            st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align:center; color: #58a6ff; margin-top: 5px;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
             k_ad = st.text_input("Kullanıcı Adı")
             k_sif = st.text_input("Şifre", type="password")
             
