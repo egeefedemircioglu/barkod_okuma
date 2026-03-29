@@ -31,6 +31,16 @@ st.markdown("""
         border-radius: 10px; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
         color: white; font-weight: bold; border: none; height: 3.5em; width: 100%; transition: 0.3s;
     }
+    /* 🌟 LOGO YUVARLAKLAŞTIRMA VE ORTALAMA 🌟 */
+    [data-testid="stImage"] { display: flex; justify-content: center; margin-bottom: -10px; margin-top: 10px; }
+    [data-testid="stImage"] img { 
+        border-radius: 50%; 
+        width: 130px !important; 
+        height: 130px !important; 
+        object-fit: cover; 
+        border: 3px solid #58a6ff; 
+        box-shadow: 0 0 15px rgba(88, 166, 255, 0.4);
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -158,7 +168,17 @@ if st.session_state.user is None:
     _, col_login, _ = st.columns([1, 1.5, 1])
     with col_login:
         with st.form("login_form"):
-            st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
+            
+            # 🌟 LOGO KONTROLÜ VE EKRANA BASILMASI
+            import os
+            if os.path.exists("logo.png"):
+                st.image("logo.png")
+            elif os.path.exists("logo.jpg"):
+                st.image("logo.jpg")
+            else:
+                # Logo dosyası bulunamazsa sistem çökmesin, eski emoji çıksın
+                st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
+            
             st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
             k_ad = st.text_input("Kullanıcı Adı")
             k_sif = st.text_input("Şifre", type="password")
@@ -171,20 +191,17 @@ if st.session_state.user is None:
                     st.session_state.user = k_ad
                     st.session_state.rol = match.iloc[0]['Rol']
                     
-                    # Giriş başarılıysa çıkış bayrağını temizle
                     if "cikis_yapildi" in st.session_state:
                         del st.session_state["cikis_yapildi"]
                     
                     if beni_hatirla:
                         cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
-                        
-                        # BÜYÜK SIR BURADA: Telefon çerezi kaydedebilsin diye 1 saniye mola veriyoruz!
+                        import time
                         time.sleep(1) 
                     
                     st.rerun()
                 else: st.error("Hatalı Giriş!")
-    st.stop() # Kullanıcı giriş yapmadıysa sistem burada bekler
-
+    st.stop()
 # --- 5. ANA PANEL (SADECE GİRİŞ YAPILINCA BURAYA GEÇER) ---
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
