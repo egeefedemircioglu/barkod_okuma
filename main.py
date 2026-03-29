@@ -169,15 +169,16 @@ if st.session_state.user is None:
     with col_login:
         with st.form("login_form"):
             
-            # 🌟 LOGO KONTROLÜ VE EKRANA BASILMASI
-            import os
-            if os.path.exists("logo.png"):
-                st.image("logo.png")
-            elif os.path.exists("logo.jpg"):
-                st.image("logo.jpg")
-            else:
-                # Logo dosyası bulunamazsa sistem çökmesin, eski emoji çıksın
-                st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
+            # 🌟 LOGOYU KUSURSUZ ORTALAMAK İÇİN GÖRÜNMEZ İÇ SÜTUNLAR KULLANIYORUZ
+            _, col_logo, _ = st.columns([1, 1, 1])
+            with col_logo:
+                import os
+                if os.path.exists("logo.png"):
+                    st.image("logo.png")
+                elif os.path.exists("logo.jpg"):
+                    st.image("logo.jpg")
+                else:
+                    st.markdown("<h1 style='text-align:center; font-size: 60px; margin:0;'>🏪☁️</h1>", unsafe_allow_html=True)
             
             st.markdown("<h1 style='text-align:center; color: #58a6ff;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
             k_ad = st.text_input("Kullanıcı Adı")
