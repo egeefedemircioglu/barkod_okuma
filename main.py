@@ -322,6 +322,9 @@ with t2:
         mask = df_goster['Urun_Adi'].str.contains(arama, case=False, na=False) | df_goster['Barkod'].str.contains(arama, case=False, na=False)
         df_goster = df_goster[mask]
 
+    # 🚨 SİHİRLİ DOKUNUŞ: Tablo ekrana basılmadan hemen önce gizli numaraları (index) sıfırlıyoruz ki Streamlit ağlamasın!
+    df_goster = df_goster.reset_index(drop=True)
+
     if st.session_state.rol == "Patron":
         st.info("💡 **EXCEL MODU:** Hücrelere çift tıklayarak fiyat/stok değiştirebilirsiniz. Silmek için satırı seçip Delete'e basın.")
         
@@ -355,7 +358,6 @@ with t2:
     else:
         st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
         st.dataframe(df_goster, width="stretch", hide_index=True)
-
 # --- SEKME 3: YÖNETİM ---
 with t3:
     if st.session_state.rol == "Patron":
