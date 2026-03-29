@@ -77,7 +77,8 @@ def kaydet(df_stok, df_user):
 if "user" not in st.session_state: st.session_state.user = None
 if "rol" not in st.session_state: st.session_state.rol = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
-if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0 
+if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0
+if "sepet" not in st.session_state: st.session_state.sepet = []
 
 # VERİLERİ ÇEKİYORUZ
 if "veriler_cekildi" not in st.session_state:
@@ -221,78 +222,118 @@ t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
 # --- SEKME 1: İŞLEMLER ---
 with t1:
-    st.markdown("### 📸 Canlı Barkod Tarayıcı")
-    if st.session_state.okunan_barkod is None:
-        st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun.")
-        okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
-        if okunan:
-            st.session_state.okunan_barkod = okunan
-            st.session_state.scanner_key += 1 
-            st.rerun() 
-    else:
-        barkod = st.session_state.okunan_barkod
-        filtre = df_stok['Barkod'] == barkod
-        urun = df_stok[filtre]
-        
-        if not urun.empty:
-            u = urun.iloc[0]
-            st.success(f"✅ Barkod Başarıyla Okundu!")
-            st.subheader(f"📦 {u['Urun_Adi']} ({barkod})")
-            st.caption(f"🕒 Son Satış: {u.get('Son_satis_tarihi', 'Henüz Satılmadı')}")
-            
-            stok_n = int(float(u['Stok']))
-            m1, m2 = st.columns(2)
-            m1.metric("💰 Fiyat", f"{u['Fiyat']} TL")
-            m2.metric("📦 Stok", f"{stok_n} Adet")
-            st.divider()
-            
-            c_sat, c_ek, c_fiy = st.columns(3)
-            with c_sat:
-                s_mik = st.number_input("Satış", 1, value=1)
-                if st.button(f"💸 {s_mik} Sat"):
-                    if s_mik > stok_n: st.error("Yetersiz stok!")
-                    else:
-                        df_stok.loc[filtre, 'Stok'] = str(stok_n - s_mik)
-                        df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
-                        df_stok.loc[filtre, 'Son_satis_tarihi'] = su_an()
-                        if kaydet(df_stok, df_user): 
-                            st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
-            with c_ek:
-                e_mik = st.number_input("Ekle", 1, value=1)
-                if st.button(f"➕ {e_mik} Ekle"):
-                    df_stok.loc[filtre, 'Stok'] = str(stok_n + e_mik)
-                    df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
-                    if kaydet(df_stok, df_user): 
-                        st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
-            with c_fiy:
-                if st.session_state.rol == "Patron":
-                    y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']))
-                    if st.button("🏷️ Güncelle"):
-                        df_stok.loc[filtre, 'Fiyat'] = str(y_f)
-                        df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
-                        if kaydet(df_stok, df_user): 
-                            st.session_state.df_stok = df_stok; st.rerun()
-                else: st.info("Yetkiniz yok")
-                        
-            st.divider()
-            if st.button("🔄 Yeni Barkod Okut", width="stretch"):
-                st.session_state.okunan_barkod = None; st.rerun()
+    st.markdown("### 🛒 Hızlı Kasa ve Satış Ekranı")
+    
+    # EKRANI İKİYE BÖLÜYORUZ: SOLDA OKUYUCU, SAĞDA SEPET
+    col_kasa, col_sepet = st.columns([1.2, 1])
+    
+    # --- SOL TARAF: BARKOD OKUMA VE SEPETE ATMA ---
+    with col_kasa:
+        if st.session_state.okunan_barkod is None:
+            st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun.")
+            okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
+            if okunan:
+                st.session_state.okunan_barkod = okunan
+                st.session_state.scanner_key += 1 
+                st.rerun() 
         else:
-            st.warning(f"Kayıtsız Barkod: {barkod}")
-            with st.form("yeni_urun"):
-                y_ad = st.text_input("Ürün Adı")
-                y_f = st.number_input("Fiyat", min_value=0.0)
-                y_s = st.number_input("Stok", min_value=0)
-                if st.form_submit_button("💾 Kaydet"):
-                    yeni = pd.DataFrame([{
-                        "Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), 
-                        "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
-                        "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
-                    }])
-                    df_stok = pd.concat([df_stok, yeni], ignore_index=True)
-                    if kaydet(df_stok, df_user): st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
-            if st.button("İptal Et"):
-                st.session_state.okunan_barkod = None; st.rerun()
+            barkod = st.session_state.okunan_barkod
+            filtre = df_stok['Barkod'] == barkod
+            urun = df_stok[filtre]
+            
+            if not urun.empty:
+                u = urun.iloc[0]
+                st.success(f"✅ BİP! Barkod Okundu")
+                st.subheader(f"📦 {u['Urun_Adi']}")
+                st.caption(f"Barkod: {barkod} | Mevcut Stok: {int(float(u['Stok']))} Adet")
+                
+                st.metric("💰 Birim Fiyat", f"{u['Fiyat']} TL")
+                st.divider()
+                
+                # SEPETE EKLEME EKRANI
+                s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=int(float(u['Stok'])), value=1)
+                
+                if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
+                    # Ürün zaten sepette varsa adetini artır, yoksa yeni satır olarak ekle
+                    mevcut_urun = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
+                    if mevcut_urun:
+                        mevcut_urun["Adet"] += s_mik
+                    else:
+                        st.session_state.sepet.append({
+                            "Barkod": barkod,
+                            "Urun_Adi": u['Urun_Adi'],
+                            "Fiyat": float(u['Fiyat']),
+                            "Adet": s_mik
+                        })
+                    st.session_state.okunan_barkod = None # Okuyucuyu sıfırla
+                    st.rerun()
+                    
+                if st.button("🔄 İptal Et (Yeni Barkod Okut)", width="stretch"):
+                    st.session_state.okunan_barkod = None
+                    st.rerun()
+            else:
+                st.error("❌ Bu barkod sistemde kayıtlı değil!")
+                if st.button("🔄 Yeniden Okut", width="stretch"):
+                    st.session_state.okunan_barkod = None; st.rerun()
+
+    # --- SAĞ TARAF: CANLI SEPET VE ONAY EKRANI ---
+    with col_sepet:
+        st.subheader("🛍️ Sepetiniz")
+        
+        if len(st.session_state.sepet) == 0:
+            st.info("Sepetiniz şu an boş. Sol taraftan ürün okutun.")
+        else:
+            # Sepetteki listeyi DataFrame'e çevirip ekranda gösteriyoruz
+            df_sepet = pd.DataFrame(st.session_state.sepet)
+            df_sepet['Toplam (TL)'] = df_sepet['Fiyat'] * df_sepet['Adet']
+            
+            st.markdown("💡 *Adet sayılarına çift tıklayıp değiştirebilir, satırı seçip 'Delete' ile silebilirsiniz.*")
+            
+            # SİHİRLİ TABLO: Müşteri anında adet değiştirirse burası algılar
+            edited_sepet = st.data_editor(
+                df_sepet,
+                width="stretch",
+                num_rows="dynamic", # Silmeye izin ver
+                hide_index=True,
+                disabled=["Barkod", "Urun_Adi", "Fiyat", "Toplam (TL)"], # Sadece Adet değiştirilebilir
+                key="sepet_editor"
+            )
+            
+            # Kullanıcı tabloda değişiklik yaptıysa bunu hafızaya (sepetimize) geri kaydet
+            st.session_state.sepet = edited_sepet.drop(columns=['Toplam (TL)']).to_dict('records')
+            
+            # GENEL TOPLAM HESAPLAMA
+            genel_toplam = edited_sepet['Toplam (TL)'].sum()
+            st.error(f"### 💳 Ödenecek Tutar: {genel_toplam:,.2f} TL")
+            st.divider()
+            
+            # SATIŞI ONAYLAMA (VERİTABANINDAN DÜŞME)
+            if st.button("✅ Satışı Onayla ve Tamamla", type="primary", width="stretch"):
+                # Sepetteki her ürünü tek tek stoktan düşüyoruz
+                for item in st.session_state.sepet:
+                    b = item['Barkod']
+                    satilan_adet = item['Adet']
+                    
+                    idx = df_stok.index[df_stok['Barkod'] == b]
+                    if not idx.empty:
+                        i = idx[0]
+                        mevcut_stok = float(df_stok.loc[i, 'Stok'])
+                        df_stok.loc[i, 'Stok'] = str(mevcut_stok - satilan_adet)
+                        df_stok.loc[i, 'Son_satis_tarihi'] = su_an()
+                        df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
+                
+                # Tüm stok düşüşlerini Google Sheets'e tek seferde kaydet
+                if kaydet(df_stok, df_user):
+                    st.session_state.df_stok = df_stok
+                    st.session_state.sepet = [] # Sepeti boşalt
+                    st.success("🎉 Satış Başarılı! Stoklar güncellendi.")
+                    import time
+                    time.sleep(1.5) # Mesajı 1.5 saniye görsünler
+                    st.rerun()
+            
+            if st.button("🗑️ Sepeti Tamamen Boşalt", width="stretch"):
+                st.session_state.sepet = []
+                st.rerun()
 
 # --- SEKME 2: ENVANTER ---
 with t2:
