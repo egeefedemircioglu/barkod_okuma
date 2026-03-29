@@ -272,9 +272,27 @@ with t1:
                     st.session_state.okunan_barkod = None
                     st.rerun()
             else:
-                st.error("❌ Bu barkod sistemde kayıtlı değil!")
-                if st.button("🔄 Yeniden Okut", width="stretch"):
-                    st.session_state.okunan_barkod = None; st.rerun()
+                st.warning(f"⚠️ Kayıtsız Barkod: {barkod}")
+                st.info("Bu ürünü hemen envantere ekleyebilirsiniz:")
+                with st.form("yeni_urun"):
+                    y_ad = st.text_input("Ürün Adı")
+                    y_f = st.number_input("Fiyat", min_value=0.0)
+                    y_s = st.number_input("Stok", min_value=0)
+                    if st.form_submit_button("💾 Kaydet ve Envantere Ekle"):
+                        yeni = pd.DataFrame([{
+                            "Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), 
+                            "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
+                            "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
+                        }])
+                        df_stok = pd.concat([df_stok, yeni], ignore_index=True)
+                        if kaydet(df_stok, df_user): 
+                            st.session_state.df_stok = df_stok
+                            st.session_state.okunan_barkod = None
+                            st.rerun()
+                            
+                if st.button("🔄 İptal Et (Yeni Barkod Okut)", width="stretch"):
+                    st.session_state.okunan_barkod = None
+                    st.rerun()
 
     # --- SAĞ TARAF: CANLI SEPET VE ONAY EKRANI ---
     with col_sepet:
