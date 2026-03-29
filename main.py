@@ -513,3 +513,9 @@ with t3:
                     if kaydet(df_stok, df_user): 
                         st.session_state.df_user = df_user; st.rerun()
     else: st.error("Yetkiniz yok.")
+# --- 6. GELİŞTİRİCİ İMZASI (FOOTER) ---
+st.markdown("""
+<div class="footer">
+    Made by <b>Ege Demircioğlu</b> | Powered by <b>Gemini</b> 🚀
+</div>
+""", unsafe_allow_html=True)
