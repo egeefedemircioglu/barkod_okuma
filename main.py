@@ -247,30 +247,59 @@ with t1:
                 st.subheader(f"📦 {u['Urun_Adi']}")
                 st.caption(f"Barkod: {barkod} | Mevcut Stok: {int(float(u['Stok']))} Adet")
                 
+                stok_n = int(float(u['Stok']))
                 st.metric("💰 Birim Fiyat", f"{u['Fiyat']} TL")
                 st.divider()
                 
-                # SEPETE EKLEME EKRANI
-                s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=int(float(u['Stok'])), value=1)
+                # --- 1. SEPETE EKLEME KISMI ---
+                s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
                 
                 if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
-                    # Ürün zaten sepette varsa adetini artır, yoksa yeni satır olarak ekle
-                    mevcut_urun = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
-                    if mevcut_urun:
-                        mevcut_urun["Adet"] += s_mik
+                    if stok_n < s_mik:
+                        st.error("Yetersiz Stok!")
                     else:
-                        st.session_state.sepet.append({
-                            "Barkod": barkod,
-                            "Urun_Adi": u['Urun_Adi'],
-                            "Fiyat": float(u['Fiyat']),
-                            "Adet": s_mik
-                        })
-                    st.session_state.okunan_barkod = None # Okuyucuyu sıfırla
-                    st.rerun()
-                    
+                        mevcut_urun = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
+                        if mevcut_urun:
+                            mevcut_urun["Adet"] += s_mik
+                        else:
+                            st.session_state.sepet.append({
+                                "Barkod": barkod,
+                                "Urun_Adi": u['Urun_Adi'],
+                                "Fiyat": float(u['Fiyat']),
+                                "Adet": s_mik
+                            })
+                        st.session_state.okunan_barkod = None 
+                        st.rerun()
+                        
                 if st.button("🔄 İptal Et (Yeni Barkod Okut)", width="stretch"):
                     st.session_state.okunan_barkod = None
                     st.rerun()
+
+                # --- 2. HIZLI STOK VE FİYAT GÜNCELLEME KISMI (GERİ GELDİ!) ---
+                st.markdown("<br>", unsafe_allow_html=True) # Ufak bir boşluk
+                with st.expander("⚙️ Hızlı Stok / Fiyat İşlemleri"):
+                    c_ek, c_fiy = st.columns(2)
+                    with c_ek:
+                        e_mik = st.number_input("Stok Ekle", 1, value=1, key=f"stok_ekle_{barkod}")
+                        if st.button(f"➕ {e_mik} Ekle", key=f"btn_ekle_{barkod}", width="stretch"):
+                            df_stok.loc[filtre, 'Stok'] = str(stok_n + e_mik)
+                            df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
+                            if kaydet(df_stok, df_user): 
+                                st.session_state.df_stok = df_stok
+                                st.success("Stok başarıyla eklendi!")
+                                st.rerun()
+                    with c_fiy:
+                        if st.session_state.rol == "Patron":
+                            y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']), key=f"fiyat_degis_{barkod}")
+                            if st.button("🏷️ Güncelle", key=f"btn_fiyat_{barkod}", width="stretch"):
+                                df_stok.loc[filtre, 'Fiyat'] = str(y_f)
+                                df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
+                                if kaydet(df_stok, df_user): 
+                                    st.session_state.df_stok = df_stok
+                                    st.success("Fiyat güncellendi!")
+                                    st.rerun()
+                        else: 
+                            st.info("Yetkiniz yok")
             else:
                 st.warning(f"⚠️ Kayıtsız Barkod: {barkod}")
                 st.info("Bu ürünü hemen envantere ekleyebilirsiniz:")
