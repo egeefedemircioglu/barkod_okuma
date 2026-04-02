@@ -478,27 +478,36 @@ with t2:
             key="envanter_editor"
         )
         
-        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
-            orijinal_barkodlar = df_goster['Barkod'].tolist()
-            kalan_barkodlar = edited_df['Barkod'].tolist()
-            silinenler = [b for b in orijinal_barkodlar if b not in kalan_barkodlar]
-            
-            df_stok = df_stok[~df_stok['Barkod'].isin(silinenler)]
-            
-            for _, row in edited_df.iterrows():
-                b = row['Barkod']
-                idx = df_stok.index[df_stok['Barkod'] == b]
-                if not idx.empty:
-                    i = idx[0]
-                    df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
-                    df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
-                    df_stok.loc[i, 'Stok'] = str(row['Stok'])
-                    df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
-                    
-            if kaydet(df_stok, df_user):
-                st.session_state.df_stok = df_stok
-                st.success("✅ Fiyatlar güncellendi ve silinen ürünler kaldırıldı!")
-                st.rerun()
+       if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
+            # 🌟 SİHİRLİ İMLEÇ BURADA BAŞLIYOR 🌟
+            with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
+                
+                # Görsel hissiyat için sistemi 2 saniye bilerek bekletiyoruz (Senin istediğin detay!)
+                import time
+                time.sleep(2) 
+                
+                orijinal_barkodlar = df_goster['Barkod'].tolist()
+                kalan_barkodlar = edited_df['Barkod'].tolist()
+                silinenler = [b for b in orijinal_barkodlar if b not in kalan_barkodlar]
+                
+                df_stok = df_stok[~df_stok['Barkod'].isin(silinenler)]
+                
+                for _, row in edited_df.iterrows():
+                    b = row['Barkod']
+                    idx = df_stok.index[df_stok['Barkod'] == b]
+                    if not idx.empty:
+                        i = idx[0]
+                        df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
+                        df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
+                        df_stok.loc[i, 'Stok'] = str(row['Stok'])
+                        df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
+                        
+                # Buluta kaydet ve sistemi otomatik yenile
+                if kaydet(df_stok, df_user):
+                    st.session_state.df_stok = df_stok
+                    st.success("✅ Değişiklikler başarıyla kaydedildi! Tablo güncelleniyor...")
+                    time.sleep(1) # Başarı mesajını okuyabilmeleri için 1 saniye daha bekle
+                    st.rerun() # Sayfayı otomatik yenile, güncel veriyi çek!
     else:
         st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
         st.dataframe(df_goster, width="stretch", hide_index=True)
