@@ -303,9 +303,31 @@ with t1:
                 st.subheader(f"📦 {u['Urun_Adi']}")
                 st.caption(f"Barkod: {barkod} | Mevcut Stok: {int(float(u['Stok']))} Adet")
                 
-                stok_n = int(float(u['Stok']))
-                st.metric("💰 Birim Fiyat", f"{u['Fiyat']} TL")
-                st.divider()
+               stok_n = int(float(u['Stok']))
+    
+    # 🌟 YENİ NEON FİYAT ETİKETİ BÜYÜSÜ 🌟
+    st.markdown(f"""
+        <div style='
+            text-align: center; 
+            padding: 15px; 
+            border-radius: 12px; 
+            border: 2px solid #ffffff; 
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2); 
+            background-color: #0d1117; 
+            margin: 15px 0;
+        '>
+            <div style='font-size: 16px; color: #a3a3a3; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Birim Fiyat</div>
+            <div style='
+                font-size: 42px; 
+                font-weight: 900; 
+                color: #ffffff; 
+                text-shadow: 0 0 10px #ffffff, 0 0 25px rgba(255, 255, 255, 0.8); 
+                letter-spacing: 2px;
+            '>💰 {u['Fiyat']} TL</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.divider()
                 
                 # --- 1. SEPETE EKLEME KISMI ---
                 s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
