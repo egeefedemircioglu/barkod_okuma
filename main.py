@@ -123,14 +123,9 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
     <html>
     <head>
         <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-        <style>
-            /* Kırmızı hata mesajını gizleyen kod */
-            span[style*="color: red"] { display: none !important; opacity: 0 !important; font-size: 0px !important; }
-            #reader__dashboard_section_csr span { display: none !important; }
-        </style>
     </head>
     <body style="margin: 0; padding: 0; background-color: #161b22;">
-        <div id="reader" style="width: 100%; border-radius: 15px; border: 2px solid #30363d; background: white;"></div>
+        <div id="reader" style="width: 100%; border-radius: 15px; border: 2px solid #30363d; background: #0d1117; min-height: 250px;"></div>
         <script>
             function playBeep() {
                 try {
@@ -146,23 +141,46 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
             function init() { sendToPython("streamlit:componentReady", {apiVersion: 1}); }
             function setComponentValue(value) { sendToPython("streamlit:setComponentValue", {value: value}); }
             
-            // BARKOD TARAYICI AYARLARI (KRAL MODU)
-            var scanner = new Html5QrcodeScanner("reader", { 
-                fps: 15, 
-                qrbox: {width: 250, height: 250}, // QR için kare kutu
-                formatsToSupport: [ 
-                    Html5QrcodeSupportedFormats.QR_CODE,  // QR KOD
-                    Html5QrcodeSupportedFormats.CODE_128, // YENİ NESİL ÇİZGİ
-                    Html5QrcodeSupportedFormats.CODE_39,  // ESKİ ÇİZGİ BARKODLAR
-                    Html5QrcodeSupportedFormats.EAN_13    // HAZIR MARKET ÜRÜNLERİ
-                ]
-            }, false);
+            // HAZIR ARAYÜZ YERİNE DOĞRUDAN ÇEKİRDEK MOTORU KULLANIYORUZ
+            var html5QrCode = new Html5Qrcode("reader");
             
-            scanner.render(function(decodedText) {
-                playBeep(); scanner.clear(); setComponentValue(decodedText); 
+            var config = { 
+                fps: 15, 
+                qrbox: {width: 250, height: 250},
+                formatsToSupport: [ 
+                    Html5QrcodeSupportedFormats.QR_CODE,  
+                    Html5QrcodeSupportedFormats.CODE_128, 
+                    Html5QrcodeSupportedFormats.CODE_39,  
+                    Html5QrcodeSupportedFormats.EAN_13    
+                ]
+            };
+
+            // Direkt olarak arka kamerayı (environment) başlat
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                function(decodedText) {
+                    playBeep();
+                    // Okuma başarılıysa kamerayı kapat ve veriyi Python'a yolla
+                    html5QrCode.stop().then(function() {
+                        setComponentValue(decodedText);
+                    });
+                },
+                function(errorMessage) {
+                    // Arka plandaki okuyamama hatalarını gizle, log'u şişirmesin
+                }
+            ).catch(function(err) {
+                // EĞER KAMERA İZNİ YOKSA VEYA HATA VERİRSE: Müşteriye net bir mesaj göster
+                document.getElementById("reader").innerHTML = 
+                    "<div style='color:white; text-align:center; padding:30px; font-family:sans-serif;'>" +
+                    "<h3 style='color:#ff4a4a; margin-top:0;'>Kamera Açılamadı 🚫</h3>" +
+                    "<p style='font-size:14px;'>Lütfen telefon ayarlarından veya tarayıcıdan kameraya izin verin.</p>" +
+                    "<button onclick='location.reload()' style='margin-top:15px; padding:10px 20px; border-radius:8px; background:#58a6ff; color:white; border:none; font-weight:bold;'>Yeniden Dene</button>" +
+                    "</div>";
             });
+
             window.addEventListener("message", function(e) {
-                if (e.data.type === "streamlit:render") { sendToPython("streamlit:setFrameHeight", {height: 450}); }
+                if (e.data.type === "streamlit:render") { sendToPython("streamlit:setFrameHeight", {height: 350}); }
             });
             init();
         </script>
