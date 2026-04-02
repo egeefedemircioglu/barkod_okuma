@@ -478,11 +478,9 @@ with t2:
             key="envanter_editor"
         )
         
-       if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
-            # 🌟 SİHİRLİ İMLEÇ BURADA BAŞLIYOR 🌟
+        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
             with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
                 
-                # Görsel hissiyat için sistemi 2 saniye bilerek bekletiyoruz (Senin istediğin detay!)
                 import time
                 time.sleep(2) 
                 
@@ -502,12 +500,11 @@ with t2:
                         df_stok.loc[i, 'Stok'] = str(row['Stok'])
                         df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
                         
-                # Buluta kaydet ve sistemi otomatik yenile
                 if kaydet(df_stok, df_user):
                     st.session_state.df_stok = df_stok
                     st.success("✅ Değişiklikler başarıyla kaydedildi! Tablo güncelleniyor...")
-                    time.sleep(1) # Başarı mesajını okuyabilmeleri için 1 saniye daha bekle
-                    st.rerun() # Sayfayı otomatik yenile, güncel veriyi çek!
+                    time.sleep(1) 
+                    st.rerun() 
     else:
         st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
         st.dataframe(df_goster, width="stretch", hide_index=True)
