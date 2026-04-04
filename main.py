@@ -34,20 +34,20 @@ st.markdown("""
     /* 🌟 LOGO KUSURSUZ MERKEZLEME VE BÜYÜTME 🌟 */
     [data-testid="stImage"] { 
         display: flex; 
-        justify-content: center !important; /* Yatayda zorla ortala */
+        justify-content: center !important; 
         align-items: center !important; 
-        width: 100%; /* Formun tam genişliğini kullan */
-        margin-top: 15px; /* Üstten hoş bir boşluk */
+        width: 100%; 
+        margin-top: 15px; 
         margin-bottom: -10px; 
     }
     
     [data-testid="stImage"] img { 
         border-radius: 50%; 
-        width: 180px !important; /* BÜYÜTÜLDÜ (Eski: 130px) */
-        height: 180px !important; /* BÜYÜTÜLDÜ (Eski: 130px) */
+        width: 180px !important; 
+        height: 180px !important; 
         object-fit: cover; 
         border: 3px solid #58a6ff; 
-        box-shadow: 0 0 20px rgba(88, 166, 255, 0.5); /* Işık arttırıldı */
+        box-shadow: 0 0 20px rgba(88, 166, 255, 0.5); 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -75,7 +75,6 @@ def verileri_yukle():
     df_s = pd.DataFrame(sh.worksheet("Sayfa1").get_all_records()).astype(str)
     df_u = pd.DataFrame(sh.worksheet("Kullanicilar").get_all_records()).astype(str)
     
-    # Senin Excel tablonla birebir uyumlu
     if 'Son_satis_tarihi' not in df_s.columns: df_s['Son_satis_tarihi'] = ""
     if 'Son_ekleme_tarihi' not in df_s.columns: df_s['Son_ekleme_tarihi'] = ""
     
@@ -97,6 +96,7 @@ if "rol" not in st.session_state: st.session_state.rol = None
 if "okunan_barkod" not in st.session_state: st.session_state.okunan_barkod = None
 if "scanner_key" not in st.session_state: st.session_state.scanner_key = 0
 if "sepet" not in st.session_state: st.session_state.sepet = []
+if "tabanca_input" not in st.session_state: st.session_state.tabanca_input = ""
 
 # VERİLERİ ÇEKİYORUZ
 if "veriler_cekildi" not in st.session_state:
@@ -105,7 +105,7 @@ if "veriler_cekildi" not in st.session_state:
     st.session_state.df_user = df_u_temp
     st.session_state.veriler_cekildi = True
 
-# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü - Hayalet Çerez Çözümü)
+# 🕵️‍♂️ BENİ HATIRLA (Otomatik Giriş Kontrolü)
 if st.session_state.user is None and not st.session_state.get("cikis_yapildi", False):
     kayitli_kullanici = cookie_manager.get(cookie="kullanici_adi")
     if kayitli_kullanici:
@@ -141,9 +141,7 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
             function init() { sendToPython("streamlit:componentReady", {apiVersion: 1}); }
             function setComponentValue(value) { sendToPython("streamlit:setComponentValue", {value: value}); }
             
-            // HAZIR ARAYÜZ YERİNE DOĞRUDAN ÇEKİRDEK MOTORU KULLANIYORUZ
             var html5QrCode = new Html5Qrcode("reader");
-            
             var config = { 
                 fps: 15, 
                 qrbox: {width: 250, height: 250},
@@ -154,23 +152,14 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
                     Html5QrcodeSupportedFormats.EAN_13    
                 ]
             };
-
-            // Direkt olarak arka kamerayı (environment) başlat
             html5QrCode.start(
-                { facingMode: "environment" }, 
-                config,
+                { facingMode: "environment" }, config,
                 function(decodedText) {
                     playBeep();
-                    // Okuma başarılıysa kamerayı kapat ve veriyi Python'a yolla
-                    html5QrCode.stop().then(function() {
-                        setComponentValue(decodedText);
-                    });
+                    html5QrCode.stop().then(function() { setComponentValue(decodedText); });
                 },
-                function(errorMessage) {
-                    // Arka plandaki okuyamama hatalarını gizle, log'u şişirmesin
-                }
+                function(errorMessage) {}
             ).catch(function(err) {
-                // EĞER KAMERA İZNİ YOKSA VEYA HATA VERİRSE: Müşteriye net bir mesaj göster
                 document.getElementById("reader").innerHTML = 
                     "<div style='color:white; text-align:center; padding:30px; font-family:sans-serif;'>" +
                     "<h3 style='color:#ff4a4a; margin-top:0;'>Kamera Açılamadı 🚫</h3>" +
@@ -178,7 +167,6 @@ with open("scanner_plugin/index.html", "w", encoding="utf-8") as f:
                     "<button onclick='location.reload()' style='margin-top:15px; padding:10px 20px; border-radius:8px; background:#58a6ff; color:white; border:none; font-weight:bold;'>Yeniden Dene</button>" +
                     "</div>";
             });
-
             window.addEventListener("message", function(e) {
                 if (e.data.type === "streamlit:render") { sendToPython("streamlit:setFrameHeight", {height: 350}); }
             });
@@ -194,34 +182,19 @@ if st.session_state.user is None:
     _, col_login, _ = st.columns([1, 1.5, 1])
     with col_login:
         with st.form("login_form"):
-            
-            # 🌟 LOGOYU DİREKT FORMA KOYUYORUZ (Merkezlemeyi CSS Hallediyor)
             import os
             if os.path.exists("logo.png"):
                 st.image("logo.png")
             else:
-                # Logo yoksa bile aynı büyüklükte ve ortada duran bir UI hazırladık
                 st.markdown("""
                     <div style='display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 15px;'>
-                        <div style='
-                            border-radius: 50%;
-                            width: 180px;
-                            height: 180px;
-                            background-color: #161b22;
-                            border: 3px solid #58a6ff;
-                            box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            font-size: 70px;
-                        '>🏪</div>
+                        <div style='border-radius: 50%; width: 180px; height: 180px; background-color: #161b22; border: 3px solid #58a6ff; box-shadow: 0 0 20px rgba(88, 166, 255, 0.5); display: flex; justify-content: center; align-items: center; font-size: 70px;'>🏪</div>
                     </div>
                     """, unsafe_allow_html=True)
             
             st.markdown("<h1 style='text-align:center; color: #58a6ff; margin-top: 5px;'>Hoşgeldiniz</h1>", unsafe_allow_html=True)
             k_ad = st.text_input("Kullanıcı Adı")
             k_sif = st.text_input("Şifre", type="password")
-            
             beni_hatirla = st.checkbox("Beni Hatırla 🍪")
             
             if st.form_submit_button("Giriş"):
@@ -229,21 +202,52 @@ if st.session_state.user is None:
                 if not match.empty:
                     st.session_state.user = k_ad
                     st.session_state.rol = match.iloc[0]['Rol']
-                    
-                    if "cikis_yapildi" in st.session_state:
-                        del st.session_state["cikis_yapildi"]
-                    
+                    if "cikis_yapildi" in st.session_state: del st.session_state["cikis_yapildi"]
                     if beni_hatirla:
                         cookie_manager.set("kullanici_adi", k_ad, max_age=30*24*60*60) 
-                        import time
                         time.sleep(1) 
-                    
                     st.rerun()
                 else: st.error("Hatalı Giriş!")
     st.stop()
+
 # --- 5. ANA PANEL (SADECE GİRİŞ YAPILINCA BURAYA GEÇER) ---
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
+
+# 🌟 SİHİRLİ BARKOD FONKSİYONLARI 🌟
+def tabanca_tetiklendi():
+    barkod = st.session_state.tabanca_input
+    if barkod:
+        st.session_state.okunan_barkod = barkod
+        filtre = st.session_state.df_stok['Barkod'] == barkod
+        if not st.session_state.df_stok[filtre].empty:
+            u = st.session_state.df_stok[filtre].iloc[0]
+            mevcut = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
+            if mevcut:
+                mevcut["Adet"] += 1
+            else:
+                st.session_state.sepet.append({
+                    "Barkod": barkod, "Urun_Adi": u['Urun_Adi'], "Fiyat": float(u['Fiyat']), "Adet": 1
+                })
+        st.session_state.tabanca_input = "" # Temizle ki sıradakini okusun!
+
+def imleci_hapset():
+    components.html(
+        """
+        <script>
+        const doc = window.parent.document;
+        setTimeout(() => {
+            const inputs = doc.querySelectorAll('input[type="text"]');
+            for(let i=0; i<inputs.length; i++) {
+                if(inputs[i].getAttribute('aria-label') === '🔫 Barkod Numarası:') {
+                    inputs[i].focus();
+                    break;
+                }
+            }
+        }, 100);
+        </script>
+        """, height=0
+    )
 
 c_bilgi, c_yenile, c_cikis = st.columns([2, 1, 1])
 with c_bilgi: st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
@@ -254,23 +258,11 @@ with c_yenile:
 
 with c_cikis:
     if st.button("🔴 Çıkış", width="stretch"):
-        
-        # 1. GÜVENLİK KONTROLÜ: Çerez gerçekten var mı diye bak, varsa sil!
-        if cookie_manager.get("kullanici_adi") is not None:
-            cookie_manager.delete("kullanici_adi")
-            
-        # 2. GARANTİ (ÇİFT DİKİŞ): Çerez yoksa bile var sayıp içini boşaltıyoruz
+        if cookie_manager.get("kullanici_adi") is not None: cookie_manager.delete("kullanici_adi")
         cookie_manager.set("kullanici_adi", "", max_age=0) 
-        
-        # 3. HAFIZAYI TEMİZLE
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        for key in list(st.session_state.keys()): del st.session_state[key]
         st.session_state.cikis_yapildi = True
-        
-        # 4. TELEFONA ZAMAN TANI
-        import time
         time.sleep(1)
-        
         st.rerun()
 
 st.divider()
@@ -279,81 +271,68 @@ t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 # --- SEKME 1: İŞLEMLER ---
 with t1:
     st.markdown("### 🛒 Hızlı Kasa ve Satış Ekranı")
-    
-    # EKRANI İKİYE BÖLÜYORUZ: SOLDA OKUYUCU, SAĞDA SEPET
     col_kasa, col_sepet = st.columns([1.2, 1])
     
-    # --- SOL TARAF: BARKOD OKUMA VE SEPETE ATMA ---
+    # --- SOL TARAF: BARKOD OKUMA ---
     with col_kasa:
-        if st.session_state.okunan_barkod is None:
-            st.info("💡 Kameraya izin verin ve barkodu çerçeveye oturtun.")
-            okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
-            if okunan:
-                st.session_state.okunan_barkod = okunan
-                st.session_state.scanner_key += 1 
-                st.rerun() 
+        cihaz_modu = st.radio("🔍 Cihaz Modu:", ["💻 Masaüstü (Tabanca)", "📱 Mobil (Kamera)"], horizontal=True)
+        st.divider()
+
+        if cihaz_modu == "💻 Masaüstü (Tabanca)":
+            imleci_hapset() # Otomatik imleç büyüsü
+            st.info("💡 İmleci aşağıdaki kutuya tıklayın ve ürünü tabancayla okutun.")
+            st.text_input("🔫 Barkod Numarası:", key="tabanca_input", on_change=tabanca_tetiklendi)
         else:
+            st.info("💡 Telefon kamerasıyla barkodu okutun.")
+            if st.session_state.okunan_barkod is None:
+                okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
+                if okunan:
+                    st.session_state.okunan_barkod = okunan
+                    st.session_state.scanner_key += 1 
+                    st.rerun() 
+
+        # ÜRÜN BULUNDUYSA:
+        if st.session_state.okunan_barkod:
             barkod = st.session_state.okunan_barkod
             filtre = df_stok['Barkod'] == barkod
             urun = df_stok[filtre]
             
             if not urun.empty:
                 u = urun.iloc[0]
-                st.success(f"✅ BİP! Barkod Okundu")
-                st.subheader(f"📦 {u['Urun_Adi']}")
-                st.caption(f"Barkod: {barkod} | Mevcut Stok: {int(float(u['Stok']))} Adet")
-                
                 stok_n = int(float(u['Stok']))
                 
-                # 🌟 YENİ NEON FİYAT ETİKETİ BÜYÜSÜ 🌟
+                st.success(f"✅ BİP! Barkod Okundu")
+                st.subheader(f"📦 {u['Urun_Adi']}")
+                st.caption(f"Barkod: {barkod} | Mevcut Stok: {stok_n} Adet")
+                
+                # 🌟 NEON FİYAT ETİKETİ 🌟
                 st.markdown(f"""
-                    <div style='
-                        text-align: center; 
-                        padding: 15px; 
-                        border-radius: 12px; 
-                        border: 2px solid #ffffff; 
-                        box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2); 
-                        background-color: #0d1117; 
-                        margin: 15px 0;
-                    '>
+                    <div style='text-align: center; padding: 15px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2); background-color: #0d1117; margin: 15px 0;'>
                         <div style='font-size: 16px; color: #a3a3a3; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Birim Fiyat</div>
-                        <div style='
-                            font-size: 42px; 
-                            font-weight: 900; 
-                            color: #ffffff; 
-                            text-shadow: 0 0 10px #ffffff, 0 0 25px rgba(255, 255, 255, 0.8); 
-                            letter-spacing: 2px;
-                        '>💰 {u['Fiyat']} TL</div>
+                        <div style='font-size: 42px; font-weight: 900; color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 25px rgba(255, 255, 255, 0.8); letter-spacing: 2px;'>💰 {u['Fiyat']} TL</div>
                     </div>
                 """, unsafe_allow_html=True)
-                
                 st.divider()
                 
-                # --- 1. SEPETE EKLEME KISMI ---
-                s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
-                
-                if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
-                    if stok_n < s_mik:
-                        st.error("Yetersiz Stok!")
-                    else:
-                        mevcut_urun = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
-                        if mevcut_urun:
-                            mevcut_urun["Adet"] += s_mik
+                if cihaz_modu == "💻 Masaüstü (Tabanca)":
+                    st.success(f"⚡ {u['Urun_Adi']} otomatik sepete eklendi! Yeni ürünü okutabilirsiniz.")
+                else:
+                    # MOBİL İÇİN MANUEL EKLEME
+                    s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
+                    if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
+                        if stok_n < s_mik: st.error("Yetersiz Stok!")
                         else:
-                            st.session_state.sepet.append({
-                                "Barkod": barkod,
-                                "Urun_Adi": u['Urun_Adi'],
-                                "Fiyat": float(u['Fiyat']),
-                                "Adet": s_mik
-                            })
-                        st.session_state.okunan_barkod = None 
-                        st.rerun()
-                        
-                if st.button("🔄 İptal Et (Yeni Barkod Okut)", width="stretch"):
+                            mevcut_urun = next((item for item in st.session_state.sepet if item["Barkod"] == barkod), None)
+                            if mevcut_urun: mevcut_urun["Adet"] += s_mik
+                            else: st.session_state.sepet.append({"Barkod": barkod, "Urun_Adi": u['Urun_Adi'], "Fiyat": float(u['Fiyat']), "Adet": s_mik})
+                            st.session_state.okunan_barkod = None 
+                            st.rerun()
+                            
+                if st.button("🔄 Ekranı Temizle", width="stretch"):
                     st.session_state.okunan_barkod = None
                     st.rerun()
 
-                # --- 2. HIZLI STOK VE FİYAT GÜNCELLEME KISMI ---
+                # HIZLI GÜNCELLEME İŞLEMLERİ
                 st.markdown("<br>", unsafe_allow_html=True) 
                 with st.expander("⚙️ Hızlı Stok / Fiyat İşlemleri"):
                     c_ek, c_fiy = st.columns(2)
@@ -364,8 +343,7 @@ with t1:
                             df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
                             if kaydet(df_stok, df_user): 
                                 st.session_state.df_stok = df_stok
-                                st.success("Stok başarıyla eklendi!")
-                                st.rerun()
+                                st.success("Stok başarıyla eklendi!"); st.rerun()
                     with c_fiy:
                         if st.session_state.rol == "Patron":
                             y_f = st.number_input("Yeni Fiyat", value=float(u['Fiyat']), key=f"fiyat_degis_{barkod}")
@@ -374,10 +352,8 @@ with t1:
                                 df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
                                 if kaydet(df_stok, df_user): 
                                     st.session_state.df_stok = df_stok
-                                    st.success("Fiyat güncellendi!")
-                                    st.rerun()
-                        else: 
-                            st.info("Yetkiniz yok")
+                                    st.success("Fiyat güncellendi!"); st.rerun()
+                        else: st.info("Yetkiniz yok")
             else:
                 st.warning(f"⚠️ Kayıtsız Barkod: {barkod}")
                 st.info("Bu ürünü hemen envantere ekleyebilirsiniz:")
@@ -386,17 +362,13 @@ with t1:
                     y_f = st.number_input("Fiyat", min_value=0.0)
                     y_s = st.number_input("Stok", min_value=0)
                     if st.form_submit_button("💾 Kaydet ve Envantere Ekle"):
-                        yeni = pd.DataFrame([{
-                            "Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), 
-                            "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
-                            "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
-                        }])
+                        yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(), "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an()}])
                         df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                         if kaydet(df_stok, df_user): 
                             st.session_state.df_stok = df_stok
                             st.session_state.okunan_barkod = None
                             st.rerun()
-                            
+                        
                 if st.button("🔄 İptal Et (Yeni Barkod Okut)", width="stretch"):
                     st.session_state.okunan_barkod = None
                     st.rerun()
@@ -408,53 +380,52 @@ with t1:
         if len(st.session_state.sepet) == 0:
             st.info("Sepetiniz şu an boş. Sol taraftan ürün okutun.")
         else:
-            # Sepetteki listeyi DataFrame'e çevirip ekranda gösteriyoruz
             df_sepet = pd.DataFrame(st.session_state.sepet)
             df_sepet['Toplam (TL)'] = df_sepet['Fiyat'] * df_sepet['Adet']
             
             st.markdown("💡 *Adet sayılarına çift tıklayıp değiştirebilir, satırı seçip 'Delete' ile silebilirsiniz.*")
             
-            # SİHİRLİ TABLO: Müşteri anında adet değiştirirse burası algılar
             edited_sepet = st.data_editor(
-                df_sepet,
-                width="stretch",
-                num_rows="dynamic", # Silmeye izin ver
-                hide_index=True,
-                disabled=["Barkod", "Urun_Adi", "Fiyat", "Toplam (TL)"], # Sadece Adet değiştirilebilir
+                df_sepet, width="stretch", num_rows="dynamic", hide_index=True,
+                disabled=["Barkod", "Urun_Adi", "Fiyat", "Toplam (TL)"],
                 key="sepet_editor"
             )
-            
-            # Kullanıcı tabloda değişiklik yaptıysa bunu hafızaya (sepetimize) geri kaydet
             st.session_state.sepet = edited_sepet.drop(columns=['Toplam (TL)']).to_dict('records')
             
-            # GENEL TOPLAM HESAPLAMA
             genel_toplam = edited_sepet['Toplam (TL)'].sum()
-            st.error(f"### 💳 Ödenecek Tutar: {genel_toplam:,.2f} TL")
-            st.divider()
             
-            # SATIŞI ONAYLAMA (VERİTABANINDAN DÜŞME)
-            if st.button("✅ Satışı Onayla ve Tamamla", type="primary", width="stretch"):
-                # Sepetteki her ürünü tek tek stoktan düşüyoruz
-                for item in st.session_state.sepet:
-                    b = item['Barkod']
-                    satilan_adet = item['Adet']
+            # 🌟 CANLI İCMAL TABELASI 🌟
+            st.markdown(f"""
+                <div style='background-color: #161b22; padding: 15px; border-radius: 12px; border: 2px solid #58a6ff; margin-top: 15px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);'>
+                    <h2 style='margin: 0; color: #ffffff; text-align: center; font-size: 28px;'>
+                        Genel Toplam: <span style='color: #58a6ff;'>{genel_toplam:,.2f} TL</span>
+                    </h2>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # 💳 DÖNEN İMLEÇLİ SATIŞ BUTONU
+            if st.button("💳 Satışı Onayla ve Tamamla", type="primary", width="stretch"):
+                with st.spinner("⏳ Stoklar düşülüyor, işlem onaylanıyor..."):
+                    time.sleep(1.5) # Efsanevi şov gecikmesi
                     
-                    idx = df_stok.index[df_stok['Barkod'] == b]
-                    if not idx.empty:
-                        i = idx[0]
-                        mevcut_stok = float(df_stok.loc[i, 'Stok'])
-                        df_stok.loc[i, 'Stok'] = str(mevcut_stok - satilan_adet)
-                        df_stok.loc[i, 'Son_satis_tarihi'] = su_an()
-                        df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
-                
-                # Tüm stok düşüşlerini Google Sheets'e tek seferde kaydet
-                if kaydet(df_stok, df_user):
-                    st.session_state.df_stok = df_stok
-                    st.session_state.sepet = [] # Sepeti boşalt
-                    st.success("🎉 Satış Başarılı! Stoklar güncellendi.")
-                    import time
-                    time.sleep(1.5) # Mesajı 1.5 saniye görsünler
-                    st.rerun()
+                    for item in st.session_state.sepet:
+                        b = item['Barkod']
+                        satilan_adet = item['Adet']
+                        idx = df_stok.index[df_stok['Barkod'] == b]
+                        if not idx.empty:
+                            i = idx[0]
+                            mevcut_stok = float(df_stok.loc[i, 'Stok'])
+                            df_stok.loc[i, 'Stok'] = str(max(0, mevcut_stok - satilan_adet))
+                            df_stok.loc[i, 'Son_satis_tarihi'] = su_an()
+                            df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
+            
+                    if kaydet(df_stok, df_user):
+                        st.session_state.df_stok = df_stok
+                        st.session_state.sepet = [] 
+                        st.session_state.okunan_barkod = None # Solu da temizle
+                        st.success("✅ İŞLEM ONAYLANDI! Sistem yeni okuma için hazır.")
+                        time.sleep(1.5)
+                        st.rerun()
             
             if st.button("🗑️ Sepeti Tamamen Boşalt", width="stretch"):
                 st.session_state.sepet = []
@@ -488,7 +459,6 @@ with t2:
         mask = df_goster['Urun_Adi'].str.contains(arama, case=False, na=False) | df_goster['Barkod'].str.contains(arama, case=False, na=False)
         df_goster = df_goster[mask]
 
-    # 🚨 SİHİRLİ DOKUNUŞ: Tablo ekrana basılmadan hemen önce gizli numaraları (index) sıfırlıyoruz ki Streamlit ağlamasın!
     df_goster = df_goster.reset_index(drop=True)
 
     if st.session_state.rol == "Patron":
@@ -502,8 +472,6 @@ with t2:
         
         if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
             with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
-                
-                import time
                 time.sleep(2) 
                 
                 orijinal_barkodlar = df_goster['Barkod'].tolist()
@@ -530,6 +498,7 @@ with t2:
     else:
         st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
         st.dataframe(df_goster, width="stretch", hide_index=True)
+
 # --- SEKME 3: YÖNETİM ---
 with t3:
     if st.session_state.rol == "Patron":
@@ -559,6 +528,7 @@ with t3:
                     if kaydet(df_stok, df_user): 
                         st.session_state.df_user = df_user; st.rerun()
     else: st.error("Yetkiniz yok.")
+
 # --- 6. GELİŞTİRİCİ İMZASI (FOOTER) ---
 st.markdown("""
 <div class="footer">
