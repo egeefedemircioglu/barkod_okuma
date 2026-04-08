@@ -204,7 +204,8 @@ df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
 def tabanca_tetiklendi():
-    barkod = st.session_state.tabanca_input
+    # BÜYÜ BURADA: Direkt çağırmak yerine get() ile alıyoruz, yoksa hata vermeyip boş geçiyor.
+    barkod = st.session_state.get("tabanca_input", "") 
     if barkod:
         st.session_state.okunan_barkod = barkod
         filtre = st.session_state.df_stok['Barkod'] == barkod
@@ -215,7 +216,7 @@ def tabanca_tetiklendi():
                 mevcut["Adet"] += 1
             else:
                 st.session_state.sepet.append({"Barkod": barkod, "Urun_Adi": u['Urun_Adi'], "Fiyat": float(u['Fiyat']), "Adet": 1})
-        st.session_state.tabanca_input = "" 
+        st.session_state.tabanca_input = ""
 
 def imleci_hapset():
     st.html(
