@@ -339,10 +339,16 @@ with t1:
                 m_deger = str(u.get('Marka', 'Genel'))
                 m_index = mevcut_markalar.index(m_deger) if m_deger in mevcut_markalar else mevcut_markalar.index("Genel")
                 
-                yeni_m = st.selectbox("Ürün Grubu / Marka:", mevcut_markalar, index=m_index, key=f"marka_sel_{barkod}")
+                # BÜYÜ BURADA: Kullanıcıya iki seçenek sunuyoruz!
+                c_m1, c_m2 = st.columns(2)
+                m_secim = c_m1.selectbox("Mevcutlardan Seç:", mevcut_markalar, index=m_index, key=f"marka_sel_{barkod}")
+                m_yeni = c_m2.text_input("Veya Yeni Marka Yaz:", key=f"marka_yaz_{barkod}", placeholder="Örn: VİKO")
+                
+                # Eğer yeni kutuya bir şey yazıldıysa onu al ve BÜYÜK HARFE çevir, yazılmadıysa listedekini al
+                yeni_m = m_yeni.strip().upper() if m_yeni.strip() != "" else m_secim
                 
                 if yeni_m != m_deger:
-                    if st.button("🏷️ Grubu Güncelle", key=f"m_save_{barkod}", width="stretch"):
+                    if st.button(f"🏷️ Grubu '{yeni_m}' Yap", key=f"m_save_{barkod}", width="stretch"):
                         df_stok.loc[filtre, 'Marka'] = yeni_m
                         df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
                         if kaydet(df_stok, df_user):
@@ -543,18 +549,15 @@ with t2:
         marka_listesi = sorted(list(df_stok['Marka'].astype(str).unique()))
         if "Genel" not in marka_listesi: marka_listesi.append("Genel")
 
+        # Kilidi kırdık, artık hücreye çift tıklayıp dilediğin markayı özgürce yazabilirsin!
         edited_df = st.data_editor(
             df_goster, 
             width="stretch", 
             num_rows="dynamic", 
             hide_index=True,
-            column_config={
-                "Marka": st.column_config.SelectboxColumn(
-                    "Grup / Marka",
-                    help="Ürünün dahil olduğu grubu seçin",
-                    options=marka_listesi,
-                    required=True,
-                )
+            disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
+            key="envanter_editor"
+        )
             },
             disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
             key="envanter_editor"
