@@ -266,7 +266,6 @@ with c_cikis:
         st.rerun()
 
 st.divider()
-t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
 # 🌟 GÜVENLİK: Tabloda Marka sütunu yoksa anında oluştur 🌟
 if 'Marka' not in df_stok.columns:
