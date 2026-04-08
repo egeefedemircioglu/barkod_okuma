@@ -268,6 +268,12 @@ with c_cikis:
 st.divider()
 t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
 
+# 🌟 GÜVENLİK: Tabloda Marka sütunu yoksa anında oluştur 🌟
+if 'Marka' not in df_stok.columns:
+    df_stok['Marka'] = "Genel"
+
+t1, t2, t3 = st.tabs(["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
+
 # --- SEKME 1: İŞLEMLER ---
 with t1:
     st.markdown("### 🛒 Hızlı Kasa ve Satış Ekranı")
@@ -303,10 +309,9 @@ with t1:
                 
                 st.success(f"✅ BİP! Barkod Okundu")
                 st.subheader(f"📦 {u['Urun_Adi']}")
-                # 🌟 YENİ AKILLI VE PARLAK STOK BİLGİSİ 🌟
-                st.caption(f"Barkod: {barkod}")
                 
-                # Stok 10'dan büyükse Yeşil, küçükse Kırmızı parlasın!
+                # 🌟 AKILLI VE PARLAK STOK BİLGİSİ 🌟
+                st.caption(f"Barkod: {barkod}")
                 s_renk = "#2ea043" if stok_n > 10 else "#f85149"
                 s_isik = "rgba(46, 160, 67, 0.8)" if stok_n > 10 else "rgba(248, 81, 73, 0.9)"
                 
@@ -327,11 +332,30 @@ with t1:
                     </div>
                 """, unsafe_allow_html=True)
                 st.divider()
+
+                # 🌟 ANINDA MARKA GÜNCELLEME ALANI 🌟
+                mevcut_markalar = sorted(list(df_stok['Marka'].astype(str).unique()))
+                if "Genel" not in mevcut_markalar: mevcut_markalar.append("Genel")
                 
+                m_deger = str(u.get('Marka', 'Genel'))
+                m_index = mevcut_markalar.index(m_deger) if m_deger in mevcut_markalar else mevcut_markalar.index("Genel")
+                
+                yeni_m = st.selectbox("Ürün Grubu / Marka:", mevcut_markalar, index=m_index, key=f"marka_sel_{barkod}")
+                
+                if yeni_m != m_deger:
+                    if st.button("🏷️ Grubu Güncelle", key=f"m_save_{barkod}", width="stretch"):
+                        df_stok.loc[filtre, 'Marka'] = yeni_m
+                        df_stok.loc[filtre, 'Son_guncelleme_tarihi'] = su_an()
+                        if kaydet(df_stok, df_user):
+                            st.session_state.df_stok = df_stok
+                            st.success(f"✅ Ürün {yeni_m} grubuna taşındı!")
+                            st.rerun()
+                st.divider()
+                
+                # SEPETE EKLEME
                 if cihaz_modu == "💻 Masaüstü (Tabanca)":
                     st.success(f"⚡ {u['Urun_Adi']} otomatik sepete eklendi! Yeni ürünü okutabilirsiniz.")
                 else:
-                    # MOBİL İÇİN MANUEL EKLEME
                     s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
                     if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
                         if stok_n < s_mik: st.error("Yetersiz Stok!")
@@ -346,7 +370,7 @@ with t1:
                     st.session_state.okunan_barkod = None
                     st.rerun()
 
-                # HIZLI GÜNCELLEME İŞLEMLERİ
+                # HIZLI STOK VE FİYAT GÜNCELLEME
                 st.markdown("<br>", unsafe_allow_html=True) 
                 with st.expander("⚙️ Hızlı Stok / Fiyat İşlemleri"):
                     c_ek, c_fiy = st.columns(2)
@@ -377,11 +401,8 @@ with t1:
                     y_f = st.number_input("Fiyat", min_value=0.0)
                     y_s = st.number_input("Stok", min_value=0)
                     if st.form_submit_button("💾 Kaydet ve Envantere Ekle"):
-                        yeni = pd.DataFrame([{
-                            "Barkod": barkod, "Urun_Adi": y_ad, "Marka": y_marka, "Fiyat": str(y_f), "Stok": str(y_s), 
-                            "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
-                            "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
-                        }])
+                        yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Marka": y_marka, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(), "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an()}])
+                        df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                         if kaydet(df_stok, df_user): 
                             st.session_state.df_stok = df_stok
                             st.session_state.okunan_barkod = None
@@ -412,7 +433,7 @@ with t1:
             
             genel_toplam = edited_sepet['Toplam (TL)'].sum()
             
-            # 🌟 CANLI İCMAL TABELASI 🌟
+            # CANLI İCMAL TABELASI
             st.markdown(f"""
                 <div style='background-color: #161b22; padding: 15px; border-radius: 12px; border: 2px solid #58a6ff; margin-top: 15px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);'>
                     <h2 style='margin: 0; color: #ffffff; text-align: center; font-size: 28px;'>
@@ -421,10 +442,11 @@ with t1:
                 </div>
             """, unsafe_allow_html=True)
             
-            # 💳 DÖNEN İMLEÇLİ SATIŞ BUTONU
+            # SATIŞ ONAYI
             if st.button("💳 Satışı Onayla ve Tamamla", type="primary", width="stretch"):
                 with st.spinner("⏳ Stoklar düşülüyor, işlem onaylanıyor..."):
-                    time.sleep(1.5) # Efsanevi şov gecikmesi
+                    import time
+                    time.sleep(1.5) 
                     
                     for item in st.session_state.sepet:
                         b = item['Barkod']
@@ -434,13 +456,18 @@ with t1:
                             i = idx[0]
                             mevcut_stok = float(df_stok.loc[i, 'Stok'])
                             df_stok.loc[i, 'Stok'] = str(max(0, mevcut_stok - satilan_adet))
+                            
+                            # Satış adedini artır
+                            eski_satis = int(float(df_stok.loc[i, 'Son_satis_sayisi'])) if str(df_stok.loc[i, 'Son_satis_sayisi']).strip() != "" else 0
+                            df_stok.loc[i, 'Son_satis_sayisi'] = str(eski_satis + satilan_adet)
+                            
                             df_stok.loc[i, 'Son_satis_tarihi'] = su_an()
                             df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
             
                     if kaydet(df_stok, df_user):
                         st.session_state.df_stok = df_stok
                         st.session_state.sepet = [] 
-                        st.session_state.okunan_barkod = None # Solu da temizle
+                        st.session_state.okunan_barkod = None
                         st.success("✅ İŞLEM ONAYLANDI! Sistem yeni okuma için hazır.")
                         time.sleep(1.5)
                         st.rerun()
@@ -453,18 +480,16 @@ with t1:
 with t2:
     st.subheader("📊 Envanter ve Stok Durumu")
     
-    # 🌟 1. TOPLU FİYAT GÜNCELLEME (ŞOV PANELİ) 🌟
+    # 🌟 TOPLU FİYAT GÜNCELLEME (ŞOV PANELİ) 🌟
     if st.session_state.rol == "Patron":
         with st.expander("🚀 MARKAYA GÖRE TOPLU FİYAT GÜNCELLEME (ZAM/İNDİRİM)"):
             c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
             
-            # Tabloda Marka sütunu yoksa anında oluştur (Hayat kurtaran satır)
-            if 'Marka' not in df_stok.columns:
-                df_stok['Marka'] = "Genel"
-                
-            mevcut_markalar = [m for m in df_stok['Marka'].unique() if m.strip() != ""]
+            # Sistemdeki mevcut markaları bul
+            mevcut_markalar_panel = [m for m in df_stok['Marka'].unique() if m.strip() != ""]
+            if not mevcut_markalar_panel: mevcut_markalar_panel = ["Genel"]
             
-            secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar)
+            secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar_panel)
             islem_tipi = c_m2.selectbox("İşlem Tipi:", ["Zam (+)", "İndirim (-)"])
             yuzde = c_m3.number_input("Yüzde Oranı (%)", min_value=0.0, value=10.0, step=1.0)
             
@@ -486,9 +511,7 @@ with t2:
                         st.rerun()
         st.divider()
 
-    # 🌟 2. TABLO HAZIRLIĞI VE GÖSTERİMİ (Sildiğin Satır Buradaydı) 🌟
     df_goster = df_stok.copy()
-    
     if 'Son_satis_tarihi' in df_goster.columns:
         df_goster['Siralama_Tarihi'] = pd.to_datetime(df_goster['Son_satis_tarihi'], format="%d/%m/%Y %H:%M", errors='coerce')
         df_goster = df_goster.sort_values(by='Siralama_Tarihi', ascending=False).drop(columns=['Siralama_Tarihi'])
@@ -512,14 +535,28 @@ with t2:
         mask = df_goster['Urun_Adi'].str.contains(arama, case=False, na=False) | df_goster['Barkod'].str.contains(arama, case=False, na=False)
         df_goster = df_goster[mask]
 
-    # İşte hata veren satır buydu, artık df_goster tanımlı olduğu için tıkır tıkır çalışacak
     df_goster = df_goster.reset_index(drop=True)
 
     if st.session_state.rol == "Patron":
-        st.info("💡 **EXCEL MODU:** Hücrelere çift tıklayarak fiyat/stok değiştirebilirsiniz. Silmek için satırı seçip Delete'e basın.")
+        st.info("💡 **EXCEL MODU:** Markaları, fiyatları veya stokları hücreye çift tıklayarak anında değiştirebilirsiniz.")
         
+        # 🌟 TABLO İÇİ AÇILIR LİSTE (SELECTBOX) HAZIRLIĞI 🌟
+        marka_listesi = sorted(list(df_stok['Marka'].astype(str).unique()))
+        if "Genel" not in marka_listesi: marka_listesi.append("Genel")
+
         edited_df = st.data_editor(
-            df_goster, width="stretch", num_rows="dynamic", hide_index=True,
+            df_goster, 
+            width="stretch", 
+            num_rows="dynamic", 
+            hide_index=True,
+            column_config={
+                "Marka": st.column_config.SelectboxColumn(
+                    "Grup / Marka",
+                    help="Ürünün dahil olduğu grubu seçin",
+                    options=marka_listesi,
+                    required=True,
+                )
+            },
             disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
             key="envanter_editor"
         )
@@ -541,7 +578,7 @@ with t2:
                     if not idx.empty:
                         i = idx[0]
                         df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
-                        df_stok.loc[i, 'Marka'] = str(row.get('Marka', 'Genel')) # Marka güncelleme kaydı
+                        df_stok.loc[i, 'Marka'] = str(row.get('Marka', 'Genel'))
                         df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
                         df_stok.loc[i, 'Stok'] = str(row['Stok'])
                         df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
