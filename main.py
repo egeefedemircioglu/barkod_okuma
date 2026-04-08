@@ -303,7 +303,21 @@ with t1:
                 
                 st.success(f"✅ BİP! Barkod Okundu")
                 st.subheader(f"📦 {u['Urun_Adi']}")
-                st.caption(f"Barkod: {barkod} | Mevcut Stok: {stok_n} Adet")
+                # 🌟 YENİ AKILLI VE PARLAK STOK BİLGİSİ 🌟
+                st.caption(f"Barkod: {barkod}")
+                
+                # Stok 10'dan büyükse Yeşil, küçükse Kırmızı parlasın!
+                s_renk = "#2ea043" if stok_n > 10 else "#f85149"
+                s_isik = "rgba(46, 160, 67, 0.8)" if stok_n > 10 else "rgba(248, 81, 73, 0.9)"
+                
+                st.markdown(f"""
+                    <div style='margin-top: -10px; margin-bottom: 15px;'>
+                        <span style='font-size: 16px; color: #8b949e;'>Mevcut Stok: </span>
+                        <span style='font-size: 28px; font-weight: 900; color: {s_renk}; text-shadow: 0 0 15px {s_isik};'>
+                            {stok_n} Adet
+                        </span>
+                    </div>
+                """, unsafe_allow_html=True)
                 
                 # 🌟 NEON FİYAT ETİKETİ 🌟
                 st.markdown(f"""
