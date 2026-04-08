@@ -77,7 +77,7 @@ def verileri_yukle():
     
     if 'Son_satis_tarihi' not in df_s.columns: df_s['Son_satis_tarihi'] = ""
     if 'Son_ekleme_tarihi' not in df_s.columns: df_s['Son_ekleme_tarihi'] = ""
-    
+    if 'Marka' not in df_s.columns: df_s['Marka'] = "Genel"
     return df_s, df_u
 
 def kaydet(df_stok, df_user):
@@ -373,11 +373,15 @@ with t1:
                 st.info("Bu ürünü hemen envantere ekleyebilirsiniz:")
                 with st.form("yeni_urun"):
                     y_ad = st.text_input("Ürün Adı")
+                    y_marka = st.text_input("Marka / Grup (Örn: KALDE)", value="Genel") # YENİ EKLENDİ
                     y_f = st.number_input("Fiyat", min_value=0.0)
                     y_s = st.number_input("Stok", min_value=0)
                     if st.form_submit_button("💾 Kaydet ve Envantere Ekle"):
-                        yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(), "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an()}])
-                        df_stok = pd.concat([df_stok, yeni], ignore_index=True)
+                        yeni = pd.DataFrame([{
+                            "Barkod": barkod, "Urun_Adi": y_ad, "Marka": y_marka, "Fiyat": str(y_f), "Stok": str(y_s), 
+                            "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(),
+                            "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an() 
+                        }])
                         if kaydet(df_stok, df_user): 
                             st.session_state.df_stok = df_stok
                             st.session_state.okunan_barkod = None
@@ -449,23 +453,38 @@ with t1:
 with t2:
     st.subheader("📊 Envanter ve Stok Durumu")
     
-    df_goster = df_stok.copy()
-    if 'Son_satis_tarihi' in df_goster.columns:
-        df_goster['Siralama_Tarihi'] = pd.to_datetime(df_goster['Son_satis_tarihi'], format="%d/%m/%Y %H:%M", errors='coerce')
-        df_goster = df_goster.sort_values(by='Siralama_Tarihi', ascending=False).drop(columns=['Siralama_Tarihi'])
-
+    # 🌟 TOPLU FİYAT GÜNCELLEME (ŞOV PANELİ) 🌟
     if st.session_state.rol == "Patron":
-        try:
-            toplam_sermaye = (pd.to_numeric(df_goster['Fiyat'], errors='coerce').fillna(0) * pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0)).sum()
-            toplam_cesit = len(df_goster)
-            toplam_adet = pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0).sum()
-        except:
-            toplam_sermaye, toplam_cesit, toplam_adet = 0.0, 0, 0
-
-        cm1, cm2, cm3 = st.columns(3)
-        cm1.metric("💰 Dükkandaki Toplam Sermaye", f"{toplam_sermaye:,.2f} TL")
-        cm2.metric("📦 Toplam Ürün Adedi", f"{int(toplam_adet)} Adet")
-        cm3.metric("🏷️ Ürün Çeşidi", f"{toplam_cesit} Kalem")
+        with st.expander("🚀 MARKAYA GÖRE TOPLU FİYAT GÜNCELLEME (ZAM/İNDİRİM)"):
+            c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
+            
+            # Sistemdeki mevcut markaları bul
+            mevcut_markalar = [m for m in df_stok['Marka'].unique() if m.strip() != ""]
+            
+            secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar)
+            islem_tipi = c_m2.selectbox("İşlem Tipi:", ["Zam (+)", "İndirim (-)"])
+            yuzde = c_m3.number_input("Yüzde Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+            
+            if st.button(f"⚡ {secilen_marka} Grubuna %{yuzde} {islem_tipi} Uygula", type="primary", width="stretch"):
+                with st.spinner("Fiyatlar hesaplanıyor ve buluta yazılıyor..."):
+                    # Sadece seçili markanın satırlarını bul
+                    mask = df_stok['Marka'] == secilen_marka
+                    
+                    # Matematik işlemi: Çarpanı belirle (Zam için 1.10, İndirim için 0.90 gibi)
+                    carpan = (1 + (yuzde / 100)) if islem_tipi == "Zam (+)" else (1 - (yuzde / 100))
+                    
+                    # Fiyatları float yap, çarp, yuvarla ve tekrar string'e çevirip kaydet
+                    eski_fiyatlar = pd.to_numeric(df_stok.loc[mask, 'Fiyat'], errors='coerce').fillna(0)
+                    yeni_fiyatlar = (eski_fiyatlar * carpan).round(2)
+                    df_stok.loc[mask, 'Fiyat'] = yeni_fiyatlar.astype(str)
+                    df_stok.loc[mask, 'Son_guncelleme_tarihi'] = su_an()
+                    
+                    if kaydet(df_stok, df_user):
+                        st.session_state.df_stok = df_stok
+                        st.success(f"✅ Başarılı! {secilen_marka} grubundaki {mask.sum()} ürünün fiyatı güncellendi.")
+                        import time
+                        time.sleep(2)
+                        st.rerun()
         st.divider()
 
     arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın:")
