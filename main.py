@@ -526,19 +526,18 @@ with t2:
         )
         
         # 🌟 SEÇİLİ ÜRÜNLERİ TOPLU TAŞIMA PANELİ 🌟
-        # Tabloda "Seç" kutucuğu işaretlenmiş olan satırları yakala
         secili_satirlar = edited_df[edited_df['Seç'] == True]
         
-        # Eğer en az 1 ürün seçildiyse bu paneli göster
         if not secili_satirlar.empty:
             secilen_adet = len(secili_satirlar)
             st.markdown(f"""
                 <div style='background-color: #1f2937; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 15px;'>
-                    <strong style='color: #60a5fa;'>🎯 {secilen_adet} Adet Ürün Seçildi.</strong> Bu ürünleri topluca bir gruba bağlayabilirsiniz:
+                    <strong style='color: #60a5fa;'>🎯 {secilen_adet} Adet Ürün Seçildi.</strong> Bu ürünleri bir gruba bağlayabilir veya gruptan çıkarabilirsiniz:
                 </div>
             """, unsafe_allow_html=True)
             
-            c_top1, c_top2, c_top3 = st.columns([2, 2, 1.5])
+            # Sütunları 4 parçaya böldük (Butonlar için yer açtık)
+            c_top1, c_top2, c_top3, c_top4 = st.columns([2, 1.5, 1.5, 1.2])
             
             marka_listesi = sorted(list(df_stok['Marka'].astype(str).unique()))
             if "Genel" not in marka_listesi: marka_listesi.append("Genel")
@@ -548,20 +547,35 @@ with t2:
             
             uygulanacak_marka = hedef_marka_yaz.strip().upper() if hedef_marka_yaz.strip() != "" else hedef_marka_sec
             
-            if c_top3.button(f"🔄 Seçilileri '{uygulanacak_marka}' Yap", type="primary", use_container_width=True):
-                with st.spinner(f"{secilen_adet} ürün taşınıyor..."):
-                    tasinacak_barkodlar = secili_satirlar['Barkod'].tolist()
-                    mask_tasima = df_stok['Barkod'].isin(tasinacak_barkodlar)
-                    
-                    df_stok.loc[mask_tasima, 'Marka'] = uygulanacak_marka
-                    df_stok.loc[mask_tasima, 'Son_guncelleme_tarihi'] = su_an()
-                    
-                    if kaydet(df_stok, df_user):
-                        st.session_state.df_stok = df_stok
-                        st.success(f"✅ Başarılı! {secilen_adet} ürün '{uygulanacak_marka}' grubuna bağlandı.")
-                        import time
-                        time.sleep(1.5)
-                        st.rerun()
+            with c_top3:
+                st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True) # Butonu kutularla hizalamak için
+                if st.button(f"🔄 Gruba Bağla", type="primary", use_container_width=True):
+                    with st.spinner(f"{secilen_adet} ürün taşınıyor..."):
+                        tasinacak_barkodlar = secili_satirlar['Barkod'].tolist()
+                        mask_tasima = df_stok['Barkod'].isin(tasinacak_barkodlar)
+                        
+                        df_stok.loc[mask_tasima, 'Marka'] = uygulanacak_marka
+                        df_stok.loc[mask_tasima, 'Son_guncelleme_tarihi'] = su_an()
+                        
+                        if kaydet(df_stok, df_user):
+                            st.session_state.df_stok = df_stok
+                            st.success(f"✅ {secilen_adet} ürün '{uygulanacak_marka}' grubuna bağlandı.")
+                            import time; time.sleep(1.5); st.rerun()
+
+            with c_top4:
+                st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                if st.button("❌ Gruptan Çıkar", use_container_width=True):
+                    with st.spinner("Ürünler gruptan temizleniyor..."):
+                        tasinacak_barkodlar = secili_satirlar['Barkod'].tolist()
+                        mask_tasima = df_stok['Barkod'].isin(tasinacak_barkodlar)
+                        
+                        df_stok.loc[mask_tasima, 'Marka'] = "Genel" # Ürünü tarafsız/grupsuz duruma getirir
+                        df_stok.loc[mask_tasima, 'Son_guncelleme_tarihi'] = su_an()
+                        
+                        if kaydet(df_stok, df_user):
+                            st.session_state.df_stok = df_stok
+                            st.warning(f"🗑️ {secilen_adet} ürün gruptan çıkarıldı (Genel yapıldı).")
+                            import time; time.sleep(1.5); st.rerun()
             st.divider()
 
         # Klasik "Tüm değişiklikleri kaydet" butonu
