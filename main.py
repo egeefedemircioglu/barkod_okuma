@@ -558,7 +558,7 @@ with t2:
             disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
             key="envanter_editor"
         )
-            }
+            
             disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
             key="envanter_editor"
         )
