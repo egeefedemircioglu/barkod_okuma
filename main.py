@@ -511,9 +511,11 @@ with t2:
     df_goster = df_goster.reset_index(drop=True)
 
     if st.session_state.rol == "Patron":
-        st.info("💡 **EXCEL MODU:** Tabloya çift tıklayarak marka, fiyat veya stoku özgürce değiştirebilirsiniz.")
+        st.info("💡 **HIZLI SEÇİM:** Tablodaki ürünlerin başındaki kutucuğu işaretleyerek ürünleri topluca bir gruba taşıyabilirsiniz.")
         
-        # 🔓 KİLİDİ KIRILMIŞ TABLO: Artık istediğin markayı elle yazabilirsin!
+        # 🌟 BÜYÜ BURADA: Tablonun en başına "Seç" isimli bir kutucuk (checkbox) sütunu ekliyoruz
+        df_goster.insert(0, "Seç", False)
+
         edited_df = st.data_editor(
             df_goster, 
             width="stretch", 
@@ -523,7 +525,47 @@ with t2:
             key="envanter_editor"
         )
         
-        if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
+        # 🌟 SEÇİLİ ÜRÜNLERİ TOPLU TAŞIMA PANELİ 🌟
+        # Tabloda "Seç" kutucuğu işaretlenmiş olan satırları yakala
+        secili_satirlar = edited_df[edited_df['Seç'] == True]
+        
+        # Eğer en az 1 ürün seçildiyse bu paneli göster
+        if not secili_satirlar.empty:
+            secilen_adet = len(secili_satirlar)
+            st.markdown(f"""
+                <div style='background-color: #1f2937; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 15px;'>
+                    <strong style='color: #60a5fa;'>🎯 {secilen_adet} Adet Ürün Seçildi.</strong> Bu ürünleri topluca bir gruba bağlayabilirsiniz:
+                </div>
+            """, unsafe_allow_html=True)
+            
+            c_top1, c_top2, c_top3 = st.columns([2, 2, 1.5])
+            
+            marka_listesi = sorted(list(df_stok['Marka'].astype(str).unique()))
+            if "Genel" not in marka_listesi: marka_listesi.append("Genel")
+            
+            hedef_marka_sec = c_top1.selectbox("Mevcut Gruplardan Seç:", marka_listesi, key="toplu_m_sec")
+            hedef_marka_yaz = c_top2.text_input("Veya Yeni Grup Yaz:", placeholder="Örn: EGE YILDIZ", key="toplu_m_yaz")
+            
+            uygulanacak_marka = hedef_marka_yaz.strip().upper() if hedef_marka_yaz.strip() != "" else hedef_marka_sec
+            
+            if c_top3.button(f"🔄 Seçilileri '{uygulanacak_marka}' Yap", type="primary", use_container_width=True):
+                with st.spinner(f"{secilen_adet} ürün taşınıyor..."):
+                    tasinacak_barkodlar = secili_satirlar['Barkod'].tolist()
+                    mask_tasima = df_stok['Barkod'].isin(tasinacak_barkodlar)
+                    
+                    df_stok.loc[mask_tasima, 'Marka'] = uygulanacak_marka
+                    df_stok.loc[mask_tasima, 'Son_guncelleme_tarihi'] = su_an()
+                    
+                    if kaydet(df_stok, df_user):
+                        st.session_state.df_stok = df_stok
+                        st.success(f"✅ Başarılı! {secilen_adet} ürün '{uygulanacak_marka}' grubuna bağlandı.")
+                        import time
+                        time.sleep(1.5)
+                        st.rerun()
+            st.divider()
+
+        # Klasik "Tüm değişiklikleri kaydet" butonu
+        if st.button("💾 Tablodaki Manuel Değişiklikleri Kaydet", width="stretch"):
             with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
                 import time
                 time.sleep(2) 
@@ -540,7 +582,7 @@ with t2:
                     if not idx.empty:
                         i = idx[0]
                         df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
-                        df_stok.loc[i, 'Marka'] = str(row.get('Marka', 'Genel')).upper() # Yazılan markayı hep büyük harf yapar
+                        df_stok.loc[i, 'Marka'] = str(row.get('Marka', 'Genel')).upper() 
                         df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
                         df_stok.loc[i, 'Stok'] = str(row['Stok'])
                         df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
