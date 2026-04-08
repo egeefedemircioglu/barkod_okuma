@@ -453,12 +453,15 @@ with t1:
 with t2:
     st.subheader("📊 Envanter ve Stok Durumu")
     
-    # 🌟 TOPLU FİYAT GÜNCELLEME (ŞOV PANELİ) 🌟
+    # 🌟 1. TOPLU FİYAT GÜNCELLEME (ŞOV PANELİ) 🌟
     if st.session_state.rol == "Patron":
         with st.expander("🚀 MARKAYA GÖRE TOPLU FİYAT GÜNCELLEME (ZAM/İNDİRİM)"):
             c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
             
-            # Sistemdeki mevcut markaları bul
+            # Tabloda Marka sütunu yoksa anında oluştur (Hayat kurtaran satır)
+            if 'Marka' not in df_stok.columns:
+                df_stok['Marka'] = "Genel"
+                
             mevcut_markalar = [m for m in df_stok['Marka'].unique() if m.strip() != ""]
             
             secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar)
@@ -467,13 +470,9 @@ with t2:
             
             if st.button(f"⚡ {secilen_marka} Grubuna %{yuzde} {islem_tipi} Uygula", type="primary", width="stretch"):
                 with st.spinner("Fiyatlar hesaplanıyor ve buluta yazılıyor..."):
-                    # Sadece seçili markanın satırlarını bul
                     mask = df_stok['Marka'] == secilen_marka
-                    
-                    # Matematik işlemi: Çarpanı belirle (Zam için 1.10, İndirim için 0.90 gibi)
                     carpan = (1 + (yuzde / 100)) if islem_tipi == "Zam (+)" else (1 - (yuzde / 100))
                     
-                    # Fiyatları float yap, çarp, yuvarla ve tekrar string'e çevirip kaydet
                     eski_fiyatlar = pd.to_numeric(df_stok.loc[mask, 'Fiyat'], errors='coerce').fillna(0)
                     yeni_fiyatlar = (eski_fiyatlar * carpan).round(2)
                     df_stok.loc[mask, 'Fiyat'] = yeni_fiyatlar.astype(str)
@@ -487,11 +486,33 @@ with t2:
                         st.rerun()
         st.divider()
 
+    # 🌟 2. TABLO HAZIRLIĞI VE GÖSTERİMİ (Sildiğin Satır Buradaydı) 🌟
+    df_goster = df_stok.copy()
+    
+    if 'Son_satis_tarihi' in df_goster.columns:
+        df_goster['Siralama_Tarihi'] = pd.to_datetime(df_goster['Son_satis_tarihi'], format="%d/%m/%Y %H:%M", errors='coerce')
+        df_goster = df_goster.sort_values(by='Siralama_Tarihi', ascending=False).drop(columns=['Siralama_Tarihi'])
+
+    if st.session_state.rol == "Patron":
+        try:
+            toplam_sermaye = (pd.to_numeric(df_goster['Fiyat'], errors='coerce').fillna(0) * pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0)).sum()
+            toplam_cesit = len(df_goster)
+            toplam_adet = pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0).sum()
+        except:
+            toplam_sermaye, toplam_cesit, toplam_adet = 0.0, 0, 0
+
+        cm1, cm2, cm3 = st.columns(3)
+        cm1.metric("💰 Dükkandaki Toplam Sermaye", f"{toplam_sermaye:,.2f} TL")
+        cm2.metric("📦 Toplam Ürün Adedi", f"{int(toplam_adet)} Adet")
+        cm3.metric("🏷️ Ürün Çeşidi", f"{toplam_cesit} Kalem")
+        st.divider()
+
     arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın:")
     if arama:
         mask = df_goster['Urun_Adi'].str.contains(arama, case=False, na=False) | df_goster['Barkod'].str.contains(arama, case=False, na=False)
         df_goster = df_goster[mask]
 
+    # İşte hata veren satır buydu, artık df_goster tanımlı olduğu için tıkır tıkır çalışacak
     df_goster = df_goster.reset_index(drop=True)
 
     if st.session_state.rol == "Patron":
@@ -505,6 +526,7 @@ with t2:
         
         if st.button("💾 Tüm Değişiklikleri Buluta Kaydet", type="primary", width="stretch"):
             with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
+                import time
                 time.sleep(2) 
                 
                 orijinal_barkodlar = df_goster['Barkod'].tolist()
@@ -519,6 +541,7 @@ with t2:
                     if not idx.empty:
                         i = idx[0]
                         df_stok.loc[i, 'Urun_Adi'] = str(row['Urun_Adi'])
+                        df_stok.loc[i, 'Marka'] = str(row.get('Marka', 'Genel')) # Marka güncelleme kaydı
                         df_stok.loc[i, 'Fiyat'] = str(row['Fiyat'])
                         df_stok.loc[i, 'Stok'] = str(row['Stok'])
                         df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
