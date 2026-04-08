@@ -232,7 +232,7 @@ def tabanca_tetiklendi():
         st.session_state.tabanca_input = "" # Temizle ki sıradakini okusun!
 
 def imleci_hapset():
-    components.html(
+    st.html(
         """
         <script>
         const doc = window.parent.document;
@@ -246,7 +246,7 @@ def imleci_hapset():
             }
         }, 100);
         </script>
-        """, height=0
+        """
     )
 
 c_bilgi, c_yenile, c_cikis = st.columns([2, 1, 1])
