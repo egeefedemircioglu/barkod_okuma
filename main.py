@@ -18,8 +18,8 @@ st.markdown("""
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
     .block-container { padding-top: 2rem !important; }
     
-    /* BÜYÜ BURADA: stHeader gizleme kodunu TAMAMEN sildik. Artık menü ok işareti sorunsuz çıkacak! */
-    [data-testid="stToolbar"] { visibility: hidden !important; } /* Sağ üstteki gereksiz yazıları gizler */
+    /* 🌟 BÜYÜ BURADA: Tüm gizleme kodlarını iptal ettik ve ok işaretini zorla en üste getirdik! */
+    [data-testid="collapsedControl"] { display: block !important; z-index: 999999 !important; }
     
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
     
