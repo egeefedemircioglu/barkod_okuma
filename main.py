@@ -305,8 +305,8 @@ with c_icerik:
                     with c_fiyat:
                         st.markdown(f"""
                             <div style='text-align: center; padding: 10px; border-radius: 10px; border: 2px solid #ffffff; background-color: #0d1117;'>
-                                <div style='font-size: 12px; color: #a3a3a3; text-transform: uppercase;'>Birim Fiyat</div>
-                                <div style='font-size: 48px; font-weight: 900; color: #ffffff;'>💰 {u['Fiyat']} TL</div>
+                                <div style='font-size: 36px; color: #a3a3a3; text-transform: uppercase;'>Birim Fiyat</div>
+                                <div style='font-size: 56px; font-weight: 900; color: #ffffff;'>💰 {u['Fiyat']} TL</div>
                             </div>
                         """, unsafe_allow_html=True)
 
@@ -314,8 +314,8 @@ with c_icerik:
                         s_renk = "#2ea043" if stok_n > 10 else "#f85149"
                         st.markdown(f"""
                             <div style='text-align: center; padding: 10px; border-radius: 10px; border: 2px solid {s_renk}; background-color: #0d1117;'>
-                                <div style='font-size: 12px; color: #a3a3a3; text-transform: uppercase;'>Mevcut Stok</div>
-                                <div style='font-size: 36px; font-weight: 900; color: {s_renk};'>{stok_n}</div>
+                                <div style='font-size: 24px; color: #a3a3a3; text-transform: uppercase;'>Mevcut Stok</div>
+                                <div style='font-size: 48px; font-weight: 900; color: {s_renk};'>{stok_n}</div>
                             </div>
                         """, unsafe_allow_html=True)
                     st.divider()
