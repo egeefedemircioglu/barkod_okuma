@@ -15,10 +15,16 @@ st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide")
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
-    .block-container { padding-top: 2rem !important; }
     
-    /* 🌟 BÜYÜ BURADA: EN ÜSTTEKİ ŞERİDİ VE TÜM İKONLARI KOMPLE SİLDİK! 🌟 */
+    /* ÜSTTEKİ ŞERİDİ VE GICIK İKONLARI KÖKÜNDEN SİLİYORUZ */
     [data-testid="stHeader"] { display: none !important; }
+    .block-container { padding-top: 2rem !important; max-width: 95% !important; }
+    
+    /* SOL MENÜYÜ GÖRSEL OLARAK AYIRMAK İÇİN UFAK BİR DOKUNUŞ */
+    div[data-testid="column"]:nth-of-type(1) {
+        border-right: 2px solid #30363d;
+        padding-right: 20px;
+    }
     
     .footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
@@ -34,24 +40,8 @@ st.markdown("""
         border-radius: 10px; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
         color: white; font-weight: bold; border: none; height: 3.5em; width: 100%; transition: 0.3s;
     }
-    [data-testid="stImage"] { 
-        display: flex; 
-        justify-content: center !important; 
-        align-items: center !important; 
-        width: 100%; 
-        margin-top: 15px; 
-        margin-bottom: -10px; 
-    }
-    [data-testid="stImage"] img { 
-        border-radius: 50%; 
-        width: 180px !important; 
-        height: 180px !important; 
-        object-fit: cover; 
-        border: 3px solid #58a6ff; 
-        box-shadow: 0 0 20px rgba(88, 166, 255, 0.5); 
-    }
-    /* Menü radyo butonlarının arasını biraz açar, daha şık durur */
-    div.row-widget.stRadio > div { gap: 10px; }
+    /* Menü butonlarının arasını açar */
+    div.row-widget.stRadio > div { gap: 15px; font-size: 18px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -204,7 +194,7 @@ if st.session_state.user is None:
                 else: st.error("Hatalı Giriş!")
     st.stop()
 
-# --- 5. ANA YERLEŞİM (SABİT MENÜ MİMARİSİ) ---
+# --- 5. ANA FONKSİYONLAR ---
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
@@ -243,22 +233,23 @@ def imleci_hapset():
 if 'Marka' not in df_stok.columns:
     df_stok['Marka'] = "Genel"
 
-# 🌟 BÜYÜK DEĞİŞİM: EKRANI SÜTUNLARA BÖLDÜK (SAĞDA SABİT MENÜ) 🌟
-# Ekranın %80'i içerik (sol), %20'si sabit menü (sağ) olacak
-c_icerik, c_menu = st.columns([4.5, 1.2], gap="large")
 
-# --- SAĞ SABİT MENÜ SÜTUNU ---
+# --- 🌟 MİMARİ: EKRANI SÜTUNLARA BÖLÜYORUZ (TASLAĞA GÖRE) 🌟 ---
+# c_menu (Sol Menü), c_icerik (Sağdaki devasa alan)
+c_menu, c_icerik = st.columns([1.2, 8], gap="large")
+
+# --- SOL SABİT MENÜ SÜTUNU ---
 with c_menu:
-    st.markdown("### 🏪 Menü")
+    st.markdown("<h2 style='color:#58a6ff; text-align:center;'>MENÜ</h2>", unsafe_allow_html=True)
+    st.divider()
+    
+    secilen_menu = st.radio("Menü Seçimi", ["🛒 İŞLEMLER", "📊 ENVANTER", "👥 YÖNETİM"], label_visibility="collapsed")
+    
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     st.divider()
     st.markdown(f"👤 **{st.session_state.user}**\n\n🟢 Yetki: {st.session_state.rol}")
     st.divider()
-    
-    # Yeni sabit sekmelerimiz
-    secilen_menu = st.radio("Sayfa Seçimi:", ["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"], label_visibility="collapsed")
-    
-    st.divider()
-    
+
     if st.button("🔄 Verileri Yenile", use_container_width=True):
         if "veriler_cekildi" in st.session_state:
             del st.session_state.veriler_cekildi
@@ -274,22 +265,23 @@ with c_menu:
         st.rerun()
 
 
-# --- SOL DEVASA İÇERİK SÜTUNU (Orijinal Txt Kodları) ---
+# --- ANA İÇERİK SÜTUNU ---
 with c_icerik:
-    if secilen_menu == "🛒 İşlemler":
-        st.markdown("### 🛒 Hızlı Kasa ve Satış Ekranı")
-        col_kasa, col_sepet = st.columns([1.2, 1])
+    
+    # 🛒 İŞLEMLER SEKME İÇERİĞİ
+    if secilen_menu == "🛒 İŞLEMLER":
+        # Taslaktaki gibi Orta Sütun (Okuma/Fiyat) ve Sağ Sütun (Sepet)
+        col_kasa, col_sepet = st.columns([1.3, 1], gap="large")
         
         with col_kasa:
+            st.markdown("### 🛒 Barkod Okuma ve İşlem Alanı")
             cihaz_modu = st.radio("🔍 Cihaz Modu:", ["💻 Masaüstü (Tabanca)", "📱 Mobil (Kamera)"], horizontal=True)
             st.divider()
 
             if cihaz_modu == "💻 Masaüstü (Tabanca)":
                 imleci_hapset() 
-                st.info("💡 İmleci aşağıdaki kutuya tıklayın ve ürünü tabancayla okutun.")
                 st.text_input("🔫 Barkod Numarası:", key="tabanca_input", on_change=tabanca_tetiklendi)
             else:
-                st.info("💡 Telefon kamerasıyla barkodu okutun.")
                 if st.session_state.okunan_barkod is None:
                     okunan = canli_okuyucu(key=f"kamera_{st.session_state.scanner_key}")
                     if okunan:
@@ -306,30 +298,29 @@ with c_icerik:
                     u = urun.iloc[0]
                     stok_n = int(float(u['Stok']))
                     
-                    st.success(f"✅ BİP! Barkod Okundu")
-                    st.subheader(f"📦 {u['Urun_Adi']}")
+                    st.subheader(f"📦 {u['Urun_Adi']} | 🔖 {barkod}")
                     
-                    st.caption(f"Barkod: {barkod}")
-                    s_renk = "#2ea043" if stok_n > 10 else "#f85149"
-                    s_isik = "rgba(46, 160, 67, 0.8)" if stok_n > 10 else "rgba(248, 81, 73, 0.9)"
-                    
-                    st.markdown(f"""
-                        <div style='margin-top: -10px; margin-bottom: 15px;'>
-                            <span style='font-size: 16px; color: #8b949e;'>Mevcut Stok: </span>
-                            <span style='font-size: 28px; font-weight: 900; color: {s_renk}; text-shadow: 0 0 15px {s_isik};'>
-                                {stok_n} Adet
-                            </span>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                        <div style='text-align: center; padding: 15px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2); background-color: #0d1117; margin: 15px 0;'>
-                            <div style='font-size: 16px; color: #a3a3a3; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;'>Birim Fiyat</div>
-                            <div style='font-size: 42px; font-weight: 900; color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 25px rgba(255, 255, 255, 0.8); letter-spacing: 2px;'>💰 {u['Fiyat']} TL</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    # 🌟 FİYAT VE STOK YAN YANA (Kompakt Tasarım)
+                    c_fiyat, c_stok = st.columns([1.5, 1])
+                    with c_fiyat:
+                        st.markdown(f"""
+                            <div style='text-align: center; padding: 10px; border-radius: 10px; border: 2px solid #ffffff; background-color: #0d1117;'>
+                                <div style='font-size: 12px; color: #a3a3a3; text-transform: uppercase;'>Birim Fiyat</div>
+                                <div style='font-size: 36px; font-weight: 900; color: #ffffff;'>💰 {u['Fiyat']} TL</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    with c_stok:
+                        s_renk = "#2ea043" if stok_n > 10 else "#f85149"
+                        st.markdown(f"""
+                            <div style='text-align: center; padding: 10px; border-radius: 10px; border: 2px solid {s_renk}; background-color: #0d1117;'>
+                                <div style='font-size: 12px; color: #a3a3a3; text-transform: uppercase;'>Mevcut Stok</div>
+                                <div style='font-size: 36px; font-weight: 900; color: {s_renk};'>{stok_n}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
                     st.divider()
 
+                    # Marka / Grup alanı
                     mevcut_markalar = sorted(list(df_stok['Marka'].astype(str).unique()))
                     if "Genel" not in mevcut_markalar: mevcut_markalar.append("Genel")
                     
@@ -352,9 +343,7 @@ with c_icerik:
                                 st.rerun()
                     st.divider()
                     
-                    if cihaz_modu == "💻 Masaüstü (Tabanca)":
-                        st.success(f"⚡ {u['Urun_Adi']} otomatik sepete eklendi! Yeni ürünü okutabilirsiniz.")
-                    else:
+                    if cihaz_modu == "📱 Mobil (Kamera)":
                         s_mik = st.number_input("Kaç Adet Eklenecek?", min_value=1, max_value=stok_n if stok_n > 0 else 1, value=1)
                         if st.button("🛒 Sepete Fırlat", type="primary", width="stretch"):
                             if stok_n < s_mik: st.error("Yetersiz Stok!")
@@ -411,15 +400,14 @@ with c_icerik:
                         st.rerun()
 
         with col_sepet:
-            st.subheader("🛍️ Sepetiniz")
+            st.markdown("### 🛍️ Sepet Alanı")
+            st.divider()
             
             if len(st.session_state.sepet) == 0:
                 st.info("Sepetiniz şu an boş. Sol taraftan ürün okutun.")
             else:
                 df_sepet = pd.DataFrame(st.session_state.sepet)
                 df_sepet['Toplam (TL)'] = df_sepet['Fiyat'] * df_sepet['Adet']
-                
-                st.markdown("💡 *Adet sayılarına çift tıklayıp değiştirebilir, satırı seçip 'Delete' ile silebilirsiniz.*")
                 
                 edited_sepet = st.data_editor(
                     df_sepet, width="stretch", num_rows="dynamic", hide_index=True,
@@ -431,16 +419,15 @@ with c_icerik:
                 genel_toplam = edited_sepet['Toplam (TL)'].sum()
                 
                 st.markdown(f"""
-                    <div style='background-color: #161b22; padding: 15px; border-radius: 12px; border: 2px solid #58a6ff; margin-top: 15px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);'>
-                        <h2 style='margin: 0; color: #ffffff; text-align: center; font-size: 28px;'>
-                            Genel Toplam: <span style='color: #58a6ff;'>{genel_toplam:,.2f} TL</span>
+                    <div style='background-color: #161b22; padding: 20px; border-radius: 12px; border: 2px solid #58a6ff; margin-top: 15px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);'>
+                        <h2 style='margin: 0; color: #ffffff; text-align: center; font-size: 32px;'>
+                            Genel Toplam<br><span style='color: #58a6ff;'>{genel_toplam:,.2f} TL</span>
                         </h2>
                     </div>
                 """, unsafe_allow_html=True)
                 
                 if st.button("💳 Satışı Onayla ve Tamamla", type="primary", width="stretch"):
                     with st.spinner("⏳ Stoklar düşülüyor, işlem onaylanıyor..."):
-                        import time
                         time.sleep(1.5) 
                         
                         for item in st.session_state.sepet:
@@ -468,8 +455,9 @@ with c_icerik:
                     st.session_state.sepet = []
                     st.rerun()
 
-    elif secilen_menu == "📊 Envanter":
-        st.subheader("📊 Envanter ve Stok Durumu")
+    # 📊 ENVANTER SEKME İÇERİĞİ
+    elif secilen_menu == "📊 ENVANTER":
+        st.markdown("### 📊 Envanter ve Stok Durumu")
         
         if st.session_state.rol == "Patron":
             with st.expander("🚀 MARKAYA GÖRE TOPLU FİYAT GÜNCELLEME (ZAM/İNDİRİM)"):
@@ -495,7 +483,6 @@ with c_icerik:
                         if kaydet(df_stok, df_user):
                             st.session_state.df_stok = df_stok
                             st.success(f"✅ Başarılı! {secilen_marka} grubundaki {mask.sum()} ürünün fiyatı güncellendi.")
-                            import time
                             time.sleep(2)
                             st.rerun()
             st.divider()
@@ -573,7 +560,7 @@ with c_icerik:
                             if kaydet(df_stok, df_user):
                                 st.session_state.df_stok = df_stok
                                 st.success(f"✅ {secilen_adet} ürün '{uygulanacak_marka}' grubuna bağlandı.")
-                                import time; time.sleep(1.5); st.rerun()
+                                time.sleep(1.5); st.rerun()
 
                 with c_top4:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
@@ -588,12 +575,11 @@ with c_icerik:
                             if kaydet(df_stok, df_user):
                                 st.session_state.df_stok = df_stok
                                 st.warning(f"🗑️ {secilen_adet} ürün gruptan çıkarıldı (Genel yapıldı).")
-                                import time; time.sleep(1.5); st.rerun()
+                                time.sleep(1.5); st.rerun()
                 st.divider()
 
             if st.button("💾 Tablodaki Manuel Değişiklikleri Kaydet", width="stretch"):
                 with st.spinner("⏳ Değişiklikler buluta işleniyor ve sistem yenileniyor... Lütfen bekleyin."):
-                    import time
                     time.sleep(2) 
                     
                     orijinal_barkodlar = df_goster['Barkod'].tolist()
@@ -622,9 +608,10 @@ with c_icerik:
             st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
             st.dataframe(df_goster, width="stretch", hide_index=True)
 
-    elif secilen_menu == "👥 Yönetim":
+    # 👥 YÖNETİM SEKME İÇERİĞİ
+    elif secilen_menu == "👥 YÖNETİM":
+        st.markdown("### 👥 Personel Yönetimi")
         if st.session_state.rol == "Patron":
-            st.subheader("👥 Personel Yönetimi")
             with st.expander("➕ Personel Ekle"):
                 ca, cb, cc = st.columns(3)
                 nu_ad, nu_sif, nu_rol = ca.text_input("Ad"), cb.text_input("Şifre"), cc.selectbox("Yetki", ["Calisan", "Patron"])
