@@ -54,7 +54,7 @@ def verileri_yukle():
     if 'Son_ekleme_tarihi' not in df_s.columns: df_s['Son_ekleme_tarihi'] = ""
     if 'Marka' not in df_s.columns: df_s['Marka'] = "Genel"
     
-    # Müşteri ve Satış Veritabanını Çek (Yoksa Oluştur)
+    # Müşteri ve Satış Veritabanını Çek
     try: df_m = pd.DataFrame(sh.worksheet("Musteriler").get_all_records()).astype(str)
     except: df_m = pd.DataFrame(columns=["Musteri_Adi", "Telefon", "Toplam_Harcama", "Kayit_Tarihi"])
     
@@ -205,7 +205,7 @@ with c_icerik:
                     st.subheader(f"📦 {u['Urun_Adi']} | 🔖 {barkod}")
                     
                     c_fiyat, c_stok = st.columns([1.5, 1])
-                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:36px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:56px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
+                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:36px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
                     s_renk = "#2ea043" if stok_n > 10 else "#f85149"
                     c_stok.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid {s_renk};background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Mevcut Stok</div><div style='font-size:36px;font-weight:900;color:{s_renk};'>{stok_n}</div></div>", unsafe_allow_html=True)
                     st.divider()
@@ -264,7 +264,7 @@ with c_icerik:
                 
                 st.markdown(f"<div style='background-color:#161b22;padding:20px;border-radius:12px;border:2px solid #58a6ff;text-align:center;font-size:32px;font-weight:bold;'>Genel Toplam<br><span style='color:#58a6ff;'>{genel_toplam:,.2f} TL</span></div>", unsafe_allow_html=True)
                 
-                # 🌟 YENİ: MÜŞTERİ SEÇİMİ VE EKLEME PANELİ 🌟
+                # MÜŞTERİ SEÇİMİ VE EKLEME PANELİ
                 st.markdown("#### 🤝 Müşteri Seçimi")
                 musteri_listesi = ["Genel Müşteri (Kayıtsız)"] + sorted(df_musteri['Musteri_Adi'].tolist())
                 secilen_musteri = st.selectbox("Satış Yapılacak Müşteri:", musteri_listesi, label_visibility="collapsed")
@@ -296,14 +296,12 @@ with c_icerik:
                                 df_stok.loc[i, 'Son_satis_tarihi'] = tarih_satis
                                 df_stok.loc[i, 'Son_guncelleme_tarihi'] = tarih_satis
                                 
-                            # Satış Geçmişi Kaydı (Sadece belirli müşteri seçilmişse veya genel tutmak istersen hepsi)
                             yeni_satislar.append({
                                 "Tarih": tarih_satis, "Musteri_Adi": secilen_musteri, "Barkod": b, 
                                 "Urun_Adi": item['Urun_Adi'], "Adet": str(satilan_adet), 
                                 "Birim_Fiyat": str(fiyat), "Toplam_Tutar": str(satilan_adet * fiyat)
                             })
                             
-                        # Müşterinin Toplam Harcamasını Güncelle
                         if secilen_musteri != "Genel Müşteri (Kayıtsız)":
                             m_idx = df_musteri.index[df_musteri['Musteri_Adi'] == secilen_musteri]
                             if not m_idx.empty:
@@ -320,19 +318,122 @@ with c_icerik:
                 
                 if st.button("🗑️ Sepeti Boşalt", width="stretch"): st.session_state.sepet = []; st.rerun()
 
-    # 📊 ENVANTER 
+    # 📊 ENVANTER (🔥 EKSİKSİZ GERİ GETİRİLDİ 🔥)
     elif secilen_menu == "📊 ENVANTER":
-        st.markdown("### 📊 Envanter Durumu")
-        df_goster = df_stok.copy()
+        st.markdown("### 📊 Envanter ve Stok Durumu")
         
         if st.session_state.rol == "Patron":
-            if st.button("💾 Manuel Tablo Değişikliklerini Kaydet", type="primary"):
-                if kaydet(df_stok, df_user, df_musteri, df_satis): st.success("Kaydedildi!"); st.rerun()
-            st.data_editor(df_goster, width="stretch", hide_index=True)
+            with st.expander("🚀 MARKAYA GÖRE TOPLU FİYAT GÜNCELLEME (ZAM/İNDİRİM)"):
+                c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
+                mevcut_markalar_panel = [m for m in df_stok['Marka'].unique() if m.strip() != ""]
+                if not mevcut_markalar_panel: mevcut_markalar_panel = ["Genel"]
+                
+                secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar_panel)
+                islem_tipi = c_m2.selectbox("İşlem Tipi:", ["Zam (+)", "İndirim (-)"])
+                yuzde = c_m3.number_input("Yüzde Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+                
+                if st.button(f"⚡ {secilen_marka} Grubuna %{yuzde} {islem_tipi} Uygula", type="primary", width="stretch"):
+                    with st.spinner("Fiyatlar hesaplanıyor ve buluta yazılıyor..."):
+                        mask = df_stok['Marka'] == secilen_marka
+                        carpan = (1 + (yuzde / 100)) if islem_tipi == "Zam (+)" else (1 - (yuzde / 100))
+                        eski_fiyatlar = pd.to_numeric(df_stok.loc[mask, 'Fiyat'], errors='coerce').fillna(0)
+                        df_stok.loc[mask, 'Fiyat'] = (eski_fiyatlar * carpan).round(2).astype(str)
+                        df_stok.loc[mask, 'Son_guncelleme_tarihi'] = su_an()
+                        if kaydet(df_stok, df_user, df_musteri, df_satis):
+                            st.session_state.df_stok = df_stok
+                            st.success(f"✅ Başarılı! {secilen_marka} grubundaki {mask.sum()} ürünün fiyatı güncellendi.")
+                            time.sleep(2); st.rerun()
+            st.divider()
+
+        df_goster = df_stok.copy()
+        if 'Son_satis_tarihi' in df_goster.columns:
+            df_goster['Siralama_Tarihi'] = pd.to_datetime(df_goster['Son_satis_tarihi'], format="%d/%m/%Y %H:%M", errors='coerce')
+            df_goster = df_goster.sort_values(by='Siralama_Tarihi', ascending=False).drop(columns=['Siralama_Tarihi'])
+
+        if st.session_state.rol == "Patron":
+            try:
+                toplam_sermaye = (pd.to_numeric(df_goster['Fiyat'], errors='coerce').fillna(0) * pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0)).sum()
+                toplam_cesit = len(df_goster)
+                toplam_adet = pd.to_numeric(df_goster['Stok'], errors='coerce').fillna(0).sum()
+            except:
+                toplam_sermaye, toplam_cesit, toplam_adet = 0.0, 0, 0
+
+            cm1, cm2, cm3 = st.columns(3)
+            cm1.metric("💰 Dükkandaki Toplam Sermaye", f"{toplam_sermaye:,.2f} TL")
+            cm2.metric("📦 Toplam Ürün Adedi", f"{int(toplam_adet)} Adet")
+            cm3.metric("🏷️ Ürün Çeşidi", f"{toplam_cesit} Kalem")
+            st.divider()
+
+        arama = st.text_input("🔍 Ürün Adı veya Barkod Yazın:")
+        if arama:
+            mask = df_goster['Urun_Adi'].str.contains(arama, case=False, na=False) | df_goster['Barkod'].str.contains(arama, case=False, na=False)
+            df_goster = df_goster[mask]
+
+        df_goster = df_goster.reset_index(drop=True)
+
+        if st.session_state.rol == "Patron":
+            st.info("💡 **HIZLI SEÇİM:** Tablodaki ürünlerin başındaki kutucuğu işaretleyerek ürünleri topluca bir gruba taşıyabilirsiniz.")
+            
+            df_goster.insert(0, "Seç", False)
+            edited_df = st.data_editor(
+                df_goster, width="stretch", num_rows="dynamic", hide_index=True,
+                disabled=["Barkod", "Son_satis_sayisi", "Son_guncelleme_tarihi", "Son_satis_tarihi", "Son_ekleme_tarihi"],
+                key="envanter_editor"
+            )
+            
+            secili_satirlar = edited_df[edited_df['Seç'] == True]
+            if not secili_satirlar.empty:
+                secilen_adet = len(secili_satirlar)
+                st.markdown(f"<div style='background-color:#1f2937;padding:15px;border-radius:10px;border-left:5px solid #3b82f6;margin-bottom:15px;'><strong style='color:#60a5fa;'>🎯 {secilen_adet} Adet Ürün Seçildi.</strong> Bu ürünleri bir gruba bağlayabilir veya gruptan çıkarabilirsiniz:</div>", unsafe_allow_html=True)
+                
+                c_top1, c_top2, c_top3, c_top4 = st.columns([2, 1.5, 1.5, 1.2])
+                marka_listesi = sorted(list(df_stok['Marka'].astype(str).unique()))
+                if "Genel" not in marka_listesi: marka_listesi.append("Genel")
+                
+                hedef_marka_sec = c_top1.selectbox("Mevcut Gruplardan Seç:", marka_listesi, key="toplu_m_sec")
+                hedef_marka_yaz = c_top2.text_input("Veya Yeni Grup Yaz:", placeholder="Örn: EGE YILDIZ", key="toplu_m_yaz")
+                uygulanacak_marka = hedef_marka_yaz.strip().upper() if hedef_marka_yaz.strip() != "" else hedef_marka_sec
+                
+                with c_top3:
+                    st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                    if st.button(f"🔄 Gruba Bağla", type="primary", use_container_width=True):
+                        with st.spinner("İşleniyor..."):
+                            df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Marka'] = uygulanacak_marka
+                            df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Son_guncelleme_tarihi'] = su_an()
+                            if kaydet(df_stok, df_user, df_musteri, df_satis):
+                                st.session_state.df_stok = df_stok; st.success(f"✅ {secilen_adet} ürün bağlandı."); time.sleep(1.5); st.rerun()
+
+                with c_top4:
+                    st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                    if st.button("❌ Gruptan Çıkar", use_container_width=True):
+                        with st.spinner("İşleniyor..."):
+                            df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Marka'] = "Genel"
+                            df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Son_guncelleme_tarihi'] = su_an()
+                            if kaydet(df_stok, df_user, df_musteri, df_satis):
+                                st.session_state.df_stok = df_stok; st.warning(f"🗑️ {secilen_adet} ürün gruptan çıkarıldı."); time.sleep(1.5); st.rerun()
+                st.divider()
+
+            if st.button("💾 Tablodaki Manuel Değişiklikleri Kaydet", width="stretch"):
+                with st.spinner("Kaydediliyor..."):
+                    orijinal_barkodlar = df_goster['Barkod'].tolist()
+                    kalan_barkodlar = edited_df['Barkod'].tolist()
+                    silinenler = [b for b in orijinal_barkodlar if b not in kalan_barkodlar]
+                    df_stok = df_stok[~df_stok['Barkod'].isin(silinenler)]
+                    
+                    for _, row in edited_df.iterrows():
+                        idx = df_stok.index[df_stok['Barkod'] == row['Barkod']]
+                        if not idx.empty:
+                            i = idx[0]
+                            df_stok.loc[i, ['Urun_Adi', 'Marka', 'Fiyat', 'Stok']] = [str(row['Urun_Adi']), str(row.get('Marka', 'Genel')).upper(), str(row['Fiyat']), str(row['Stok'])]
+                            df_stok.loc[i, 'Son_guncelleme_tarihi'] = su_an()
+                            
+                    if kaydet(df_stok, df_user, df_musteri, df_satis):
+                        st.session_state.df_stok = df_stok; st.success("✅ Tablo güncellendi!"); time.sleep(1); st.rerun() 
         else:
+            st.info("💡 Sadece ürünleri görüntüleme yetkiniz var.")
             st.dataframe(df_goster, width="stretch", hide_index=True)
 
-    # 🤝 MÜŞTERİLER (YENİ SEKME)
+    # 🤝 MÜŞTERİLER 
     elif secilen_menu == "🤝 MÜŞTERİLER":
         st.markdown("### 🤝 Müşteri Yönetimi ve Satış Geçmişi")
         
@@ -367,4 +468,4 @@ with c_icerik:
             st.dataframe(df_user, hide_index=True)
         else: st.error("Yetkiniz yok.")
 
-st.markdown("<div class='footer'>Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.0 🚀</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.1 🚀</div>", unsafe_allow_html=True)
