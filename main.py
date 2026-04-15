@@ -10,30 +10,22 @@ import pytz
 import extra_streamlit_components as stx
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
-# initial_sidebar_state eklendi ki sayfa açılınca menü açık gelsin
+# initial_sidebar_state="expanded" sayesinde sayfa açıldığında menü hep AÇIK başlar
 st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
-    .block-container { padding-top: 2rem !important; }
+    .block-container { padding-top: 1rem !important; }
     
-    /* 🌟 SAĞ ÜSTÜ SİLEN, SOL ÜSTÜ KORUYAN KESİN ÇÖZÜM 🌟 */
+    /* 🌟 BÜYÜ BURADA: ÜST TARAFI KOMPLE SİLDİK, MENÜYÜ KİLİTLEDİK! 🌟 */
     
-    /* 1. Başlığı (Header) silmiyoruz, sadece şeffaf yapıyoruz ki ok işareti orada kalsın */
-    [data-testid="stHeader"] { background: transparent !important; display: flex !important; }
+    /* 1. Ekranın en üstündeki gereksiz boşluğu ve tüm butonları tamamen yok eder */
+    [data-testid="stHeader"] { display: none !important; }
     
-    /* 2. Sağ üstteki o gıcık ikonları (GitHub, Hamburger, Deploy) tek tek siliyoruz */
-    [data-testid="stToolbar"] { display: none !important; }
-    .stDeployButton { display: none !important; }
-    #MainMenu { display: none !important; }
-    
-    /* 3. Sol üstteki sidebar açma tuşunu (ok işareti) her ne olursa olsun zorla gösteriyoruz */
-    [data-testid="collapsedControl"] { 
-        display: block !important; 
-        visibility: visible !important; 
-        z-index: 999999 !important; 
-    }
+    /* 2. Menüyü Kapatma (X veya <) ve Açma (>) butonlarını tamamen gizler. Menü Kilitlenir! */
+    [data-testid="stSidebarCollapseButton"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
     
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
     
