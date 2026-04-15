@@ -10,15 +10,19 @@ import pytz
 import extra_streamlit_components as stx
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
+# initial_sidebar_state eklendi ki sayfa açılınca menü açık gelsin
 st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
     .block-container { padding-top: 2rem !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stToolbar"] { display: none !important; }
+    
+    /* BÜYÜ BURADA: stHeader gizleme kodunu TAMAMEN sildik. Artık menü ok işareti sorunsuz çıkacak! */
+    [data-testid="stToolbar"] { visibility: hidden !important; } /* Sağ üstteki gereksiz yazıları gizler */
+    
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
+    
     .footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
         background-color: rgba(13, 17, 23, 0.9); color: #8b949e;
@@ -201,7 +205,7 @@ if st.session_state.user is None:
                 else: st.error("Hatalı Giriş!")
     st.stop()
 
-# --- 5. ANA PANEL VE SOL MENÜ ---
+# --- 5. ANA PANEL ---
 df_stok = st.session_state.df_stok
 df_user = st.session_state.df_user
 
@@ -248,9 +252,10 @@ with st.sidebar:
     secilen_menu = st.radio("📌 MENÜ", ["🛒 İşlemler", "📊 Envanter", "👥 Yönetim"])
     st.divider()
     st.markdown(f"👤 **{st.session_state.user}** | 🟢 Yetki: {st.session_state.rol}")
-    
+
     if st.button("🔄 Verileri Yenile", use_container_width=True):
-        if "veriler_cekildi" in st.session_state: del st.session_state.veriler_cekildi
+        if "veriler_cekildi" in st.session_state:
+            del st.session_state.veriler_cekildi
         st.session_state.okunan_barkod = None
         st.rerun()
 
@@ -291,9 +296,9 @@ if secilen_menu == "🛒 İşlemler":
                 u = urun.iloc[0]
                 stok_n = int(float(u['Stok']))
                 
+                # 🌟 KOMPAKT YATAY YERLEŞİM (FİYAT VE STOK YAN YANA) 🌟
                 st.subheader(f"📦 {u['Urun_Adi']} | 🔖 {barkod}")
                 
-                # 🌟 KOMPAKT YATAY YERLEŞİM (FİYAT VE STOK YAN YANA) 🌟
                 c_fiyat, c_stok = st.columns([1.5, 1])
                 
                 with c_fiyat:
