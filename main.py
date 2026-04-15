@@ -18,13 +18,22 @@ st.markdown("""
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
     .block-container { padding-top: 2rem !important; }
     
-    /* 🌟 SAĞ ÜSTTEKİ GICIK İKONLARI YOK EDEN BÜYÜ 🌟 */
+    /* 🌟 SAĞ ÜSTÜ SİLEN, SOL ÜSTÜ KORUYAN KESİN ÇÖZÜM 🌟 */
+    
+    /* 1. Başlığı (Header) silmiyoruz, sadece şeffaf yapıyoruz ki ok işareti orada kalsın */
+    [data-testid="stHeader"] { background: transparent !important; display: flex !important; }
+    
+    /* 2. Sağ üstteki o gıcık ikonları (GitHub, Hamburger, Deploy) tek tek siliyoruz */
     [data-testid="stToolbar"] { display: none !important; }
     .stDeployButton { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* Sol üstteki menü açma tuşunu koruma altına aldık, asla kaybolmaz */
-    [data-testid="collapsedControl"] { display: block !important; z-index: 999999 !important; }
+    /* 3. Sol üstteki sidebar açma tuşunu (ok işareti) her ne olursa olsun zorla gösteriyoruz */
+    [data-testid="collapsedControl"] { 
+        display: block !important; 
+        visibility: visible !important; 
+        z-index: 999999 !important; 
+    }
     
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
     
