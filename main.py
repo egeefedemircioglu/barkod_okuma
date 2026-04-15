@@ -18,7 +18,12 @@ st.markdown("""
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
     .block-container { padding-top: 2rem !important; }
     
-    /* 🌟 BÜYÜ BURADA: Tüm gizleme kodlarını iptal ettik ve ok işaretini zorla en üste getirdik! */
+    /* 🌟 SAĞ ÜSTTEKİ GICIK İKONLARI YOK EDEN BÜYÜ 🌟 */
+    [data-testid="stToolbar"] { display: none !important; }
+    .stDeployButton { display: none !important; }
+    #MainMenu { display: none !important; }
+    
+    /* Sol üstteki menü açma tuşunu koruma altına aldık, asla kaybolmaz */
     [data-testid="collapsedControl"] { display: block !important; z-index: 999999 !important; }
     
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
