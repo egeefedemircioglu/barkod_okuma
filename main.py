@@ -16,16 +16,17 @@ st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide", initial_sid
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at top, #1a1f25, #0d1117); color: #c9d1d9; }
-    .block-container { padding-top: 1rem !important; }
+    .block-container { padding-top: 3rem !important; }
     
-    /* 🌟 BÜYÜ BURADA: ÜST TARAFI KOMPLE SİLDİK, MENÜYÜ KİLİTLEDİK! 🌟 */
+    /* 🌟 ŞEFFAF BAŞLIK (Menü tuşu kaybolmasın diye) 🌟 */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
     
-    /* 1. Ekranın en üstündeki gereksiz boşluğu ve tüm butonları tamamen yok eder */
-    [data-testid="stHeader"] { display: none !important; }
-    
-    /* 2. Menüyü Kapatma (X veya <) ve Açma (>) butonlarını tamamen gizler. Menü Kilitlenir! */
-    [data-testid="stSidebarCollapseButton"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
+    /* 🌟 SADECE SAĞ ÜSTTEKİ GICIK İKONLARI SİL (Github, Deploy, Menü) 🌟 */
+    [data-testid="stToolbar"] { display: none !important; }
+    [data-testid="stStatusWidget"] { display: none !important; }
+    .stDeployButton { display: none !important; }
     
     .stSidebar { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
     
