@@ -165,10 +165,10 @@ with c_menu:
     st.divider()
     st.markdown(f"👤 **{st.session_state.user}**\n\n🟢 Yetki: {st.session_state.rol}")
     st.divider()
-    if st.button("🔄 Verileri Yenile", use_container_width=True):
+    if st.button("🔄 Verileri Yenile", width="stretch"):
         if "veriler_cekildi" in st.session_state: del st.session_state.veriler_cekildi
         st.session_state.okunan_barkod = None; st.rerun()
-    if st.button("🔴 Çıkış Yap", use_container_width=True):
+    if st.button("🔴 Çıkış Yap", width="stretch"):
         cookie_manager.delete("kullanici_adi")
         for key in list(st.session_state.keys()): del st.session_state[key]
         st.session_state.cikis_yapildi = True; time.sleep(1); st.rerun()
@@ -396,7 +396,7 @@ with c_icerik:
                 
                 with c_top3:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-                    if st.button(f"🔄 Gruba Bağla", type="primary", use_container_width=True):
+                    if st.button(f"🔄 Gruba Bağla", type="primary", width="stretch"):
                         with st.spinner("İşleniyor..."):
                             df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Marka'] = uygulanacak_marka
                             df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Son_guncelleme_tarihi'] = su_an()
@@ -405,7 +405,7 @@ with c_icerik:
 
                 with c_top4:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-                    if st.button("❌ Gruptan Çıkar", use_container_width=True):
+                    if st.button("❌ Gruptan Çıkar", width="stretch"):
                         with st.spinner("İşleniyor..."):
                             df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Marka'] = "Genel"
                             df_stok.loc[df_stok['Barkod'].isin(secili_satirlar['Barkod']), 'Son_guncelleme_tarihi'] = su_an()
@@ -444,14 +444,14 @@ with c_icerik:
             df_m_goster = df_musteri.copy()
             if not df_m_goster.empty:
                 df_m_goster['Toplam_Harcama'] = pd.to_numeric(df_m_goster['Toplam_Harcama'], errors='coerce').fillna(0)
-                st.dataframe(df_m_goster.sort_values(by="Toplam_Harcama", ascending=False), hide_index=True, use_container_width=True)
+                st.dataframe(df_m_goster.sort_values(by="Toplam_Harcama", ascending=False), hide_index=True, width="stretch")
                 
-                # 🌟 YENİ: MÜŞTERİ SİLME ALANI (Sadece Patron)
+                # MÜŞTERİ SİLME ALANI
                 if st.session_state.rol == "Patron":
                     st.markdown("<br>", unsafe_allow_html=True)
                     with st.expander("❌ Müşteri Sil"):
                         sil_secim = st.selectbox("Sistemden Kaldırılacak Müşteri:", ["Seçiniz..."] + sorted(df_musteri['Musteri_Adi'].tolist()))
-                        if st.button("🗑️ Müşteriyi Tamamen Sil", type="primary", use_container_width=True):
+                        if st.button("🗑️ Müşteriyi Tamamen Sil", type="primary", width="stretch"):
                             if sil_secim != "Seçiniz...":
                                 df_musteri = df_musteri[df_musteri['Musteri_Adi'] != sil_secim].reset_index(drop=True)
                                 if kaydet(df_stok, df_user, df_musteri, df_satis):
@@ -475,7 +475,7 @@ with c_icerik:
                 else:
                     toplam_bakiye = pd.to_numeric(sat_gecmisi['Toplam_Tutar'], errors='coerce').fillna(0).sum()
                     st.markdown(f"<h3 style='color:#58a6ff;'>Toplam Satış Hacmi: {toplam_bakiye:,.2f} TL</h3>", unsafe_allow_html=True)
-                    st.dataframe(sat_gecmisi.sort_values(by="Tarih", ascending=False).drop(columns=['Musteri_Adi']), hide_index=True, use_container_width=True)
+                    st.dataframe(sat_gecmisi.sort_values(by="Tarih", ascending=False).drop(columns=['Musteri_Adi']), hide_index=True, width="stretch")
 
     # 👥 YÖNETİM
     elif secilen_menu == "👥 YÖNETİM":
@@ -486,7 +486,7 @@ with c_icerik:
                 nu_ad = ca.text_input("Kullanıcı Adı")
                 nu_sif = cb.text_input("Şifre")
                 nu_rol = cc.selectbox("Yetki", ["Calisan", "Patron"])
-                if st.button("Kaydet", use_container_width=True):
+                if st.button("Kaydet", width="stretch"):
                     df_user = pd.concat([df_user, pd.DataFrame([{"Kullanici_Adi": nu_ad, "Sifre": nu_sif, "Rol": nu_rol}])], ignore_index=True)
                     if kaydet(df_stok, df_user, df_musteri, df_satis): 
                         st.session_state.df_user = df_user
@@ -524,6 +524,6 @@ with c_icerik:
 # --- 6. GELİŞTİRİCİ İMZASI (FOOTER) ---
 st.markdown("""
 <div class="footer">
-    Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.3 🚀
+    Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.4 🚀
 </div>
 """, unsafe_allow_html=True)
