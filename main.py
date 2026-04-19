@@ -205,9 +205,9 @@ with c_icerik:
                     st.subheader(f"📦 {u['Urun_Adi']} | 🔖 {barkod}")
                     
                     c_fiyat, c_stok = st.columns([1.5, 1])
-                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:36px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
+                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:48px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:56px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
                     s_renk = "#2ea043" if stok_n > 10 else "#f85149"
-                    c_stok.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid {s_renk};background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Mevcut Stok</div><div style='font-size:36px;font-weight:900;color:{s_renk};'>{stok_n}</div></div>", unsafe_allow_html=True)
+                    c_stok.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid {s_renk};background-color:#0d1117;'><div style='font-size:48px;color:#a3a3a3;'>Mevcut Stok</div><div style='font-size:56px;font-weight:900;color:{s_renk};'>{stok_n}</div></div>", unsafe_allow_html=True)
                     st.divider()
 
                     if cihaz_modu == "💻 Masaüstü (Tabanca)": st.success(f"⚡ {u['Urun_Adi']} sepete eklendi!")
