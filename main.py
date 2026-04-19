@@ -205,9 +205,9 @@ with c_icerik:
                     st.subheader(f"📦 {u['Urun_Adi']} | 🔖 {barkod}")
                     
                     c_fiyat, c_stok = st.columns([1.5, 1])
-                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:48px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:56px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
+                    c_fiyat.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid #fff;background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Birim Fiyat</div><div style='font-size:36px;font-weight:900;color:#fff;'>💰 {u['Fiyat']} TL</div></div>", unsafe_allow_html=True)
                     s_renk = "#2ea043" if stok_n > 10 else "#f85149"
-                    c_stok.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid {s_renk};background-color:#0d1117;'><div style='font-size:36px;color:#a3a3a3;'>Mevcut Stok</div><div style='font-size:36px;font-weight:900;color:{s_renk};'>{stok_n}</div></div>", unsafe_allow_html=True)
+                    c_stok.markdown(f"<div style='text-align:center;padding:10px;border-radius:10px;border:2px solid {s_renk};background-color:#0d1117;'><div style='font-size:12px;color:#a3a3a3;'>Mevcut Stok</div><div style='font-size:36px;font-weight:900;color:{s_renk};'>{stok_n}</div></div>", unsafe_allow_html=True)
                     st.divider()
 
                     if cihaz_modu == "💻 Masaüstü (Tabanca)": st.success(f"⚡ {u['Urun_Adi']} sepete eklendi!")
@@ -318,7 +318,7 @@ with c_icerik:
                 
                 if st.button("🗑️ Sepeti Boşalt", width="stretch"): st.session_state.sepet = []; st.rerun()
 
-    # 📊 ENVANTER (🔥 EKSİKSİZ GERİ GETİRİLDİ 🔥)
+    # 📊 ENVANTER 
     elif secilen_menu == "📊 ENVANTER":
         st.markdown("### 📊 Envanter ve Stok Durumu")
         
@@ -465,7 +465,49 @@ with c_icerik:
     elif secilen_menu == "👥 YÖNETİM":
         st.markdown("### 👥 Personel Yönetimi")
         if st.session_state.rol == "Patron":
-            st.dataframe(df_user, hide_index=True)
-        else: st.error("Yetkiniz yok.")
+            with st.expander("➕ Yeni Personel Ekle"):
+                ca, cb, cc = st.columns(3)
+                nu_ad = ca.text_input("Kullanıcı Adı")
+                nu_sif = cb.text_input("Şifre")
+                nu_rol = cc.selectbox("Yetki", ["Calisan", "Patron"])
+                if st.button("Kaydet", use_container_width=True):
+                    df_user = pd.concat([df_user, pd.DataFrame([{"Kullanici_Adi": nu_ad, "Sifre": nu_sif, "Rol": nu_rol}])], ignore_index=True)
+                    if kaydet(df_stok, df_user, df_musteri, df_satis): 
+                        st.session_state.df_user = df_user
+                        st.rerun()
+                    
+            st.divider()
+            st.markdown("#### 🔑 Mevcut Personeller")
+            for idx, row in df_user.iterrows():
+                cad, cps, csl = st.columns([2, 2, 1])
+                cad.markdown(f"<div style='margin-top:28px;'>**{row['Kullanici_Adi']}** ({row['Rol']})</div>", unsafe_allow_html=True)
+                n_ps = cps.text_input("Yeni Şifre", value=row['Sifre'], key=f"pw_{idx}")
+                
+                with csl:
+                    st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                    c_up, c_del = st.columns(2)
+                    if c_up.button("💾", key=f"btn_up_{idx}", help="Şifreyi Güncelle"):
+                        df_user.at[idx, 'Sifre'] = n_ps
+                        if kaydet(df_stok, df_user, df_musteri, df_satis): 
+                            st.session_state.df_user = df_user
+                            st.success("Güncellendi")
+                            time.sleep(1)
+                            st.rerun()
+                    
+                    if row['Kullanici_Adi'] != st.session_state.user:
+                        if c_del.button("❌", key=f"btn_del_{idx}", help="Personeli Sil"):
+                            df_user = df_user.drop(idx).reset_index(drop=True)
+                            if kaydet(df_stok, df_user, df_musteri, df_satis): 
+                                st.session_state.df_user = df_user
+                                st.warning("Silindi")
+                                time.sleep(1)
+                                st.rerun()
+        else: 
+            st.error("Bu sayfayı görüntülemek için Patron yetkisine sahip olmalısınız.")
 
-st.markdown("<div class='footer'>Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.1 🚀</div>", unsafe_allow_html=True)
+# --- 6. GELİŞTİRİCİ İMZASI (FOOTER) ---
+st.markdown("""
+<div class="footer">
+    Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.2 🚀
+</div>
+""", unsafe_allow_html=True)
