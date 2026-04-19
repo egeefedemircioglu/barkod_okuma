@@ -445,6 +445,22 @@ with c_icerik:
             if not df_m_goster.empty:
                 df_m_goster['Toplam_Harcama'] = pd.to_numeric(df_m_goster['Toplam_Harcama'], errors='coerce').fillna(0)
                 st.dataframe(df_m_goster.sort_values(by="Toplam_Harcama", ascending=False), hide_index=True, use_container_width=True)
+                
+                # 🌟 YENİ: MÜŞTERİ SİLME ALANI (Sadece Patron)
+                if st.session_state.rol == "Patron":
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    with st.expander("❌ Müşteri Sil"):
+                        sil_secim = st.selectbox("Sistemden Kaldırılacak Müşteri:", ["Seçiniz..."] + sorted(df_musteri['Musteri_Adi'].tolist()))
+                        if st.button("🗑️ Müşteriyi Tamamen Sil", type="primary", use_container_width=True):
+                            if sil_secim != "Seçiniz...":
+                                df_musteri = df_musteri[df_musteri['Musteri_Adi'] != sil_secim].reset_index(drop=True)
+                                if kaydet(df_stok, df_user, df_musteri, df_satis):
+                                    st.session_state.df_musteri = df_musteri
+                                    st.warning(f"✅ {sil_secim} sistemden kalıcı olarak silindi.")
+                                    time.sleep(1.5)
+                                    st.rerun()
+                            else:
+                                st.error("Lütfen listeden bir müşteri seçin.")
             else:
                 st.info("Henüz kayıtlı müşteri yok.")
                 
@@ -508,6 +524,6 @@ with c_icerik:
 # --- 6. GELİŞTİRİCİ İMZASI (FOOTER) ---
 st.markdown("""
 <div class="footer">
-    Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.2 🚀
+    Made by <b>Ege Demircioğlu</b> | CRM Destekli V4.3 🚀
 </div>
 """, unsafe_allow_html=True)
