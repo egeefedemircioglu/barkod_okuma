@@ -8,6 +8,7 @@ import time
 import streamlit.components.v1 as components
 import pytz
 import extra_streamlit_components as stx
+import math  # 🌟 YUKARI YUVARLAMA BÜYÜSÜ İÇİN BUNU EKLE
 
 # --- 1. GÖRSEL TASARIM VE KURUMSAL KİMLİK (CSS) ---
 st.set_page_config(page_title="Pro Kasa Elite Cloud", layout="wide")
@@ -329,19 +330,32 @@ with c_icerik:
                 if not mevcut_markalar_panel: mevcut_markalar_panel = ["Genel"]
                 
                 secilen_marka = c_m1.selectbox("İşlem Yapılacak Marka:", mevcut_markalar_panel)
-                islem_tipi = c_m2.selectbox("İşlem Tipi:", ["Zam (+)", "İndirim (-)"])
+                
+                # 🌟 BÜYÜ BURADA: Sembolleri kaldırdım, Python'un kafası karışmasın diye netleştirdim
+                islem_tipi = c_m2.selectbox("İşlem Tipi:", ["ZAM", "İNDİRİM"])
                 yuzde = c_m3.number_input("Yüzde Oranı (%)", min_value=0.0, value=10.0, step=1.0)
                 
                 if st.button(f"⚡ {secilen_marka} Grubuna %{yuzde} {islem_tipi} Uygula", type="primary", width="stretch"):
                     with st.spinner("Fiyatlar hesaplanıyor ve buluta yazılıyor..."):
                         mask = df_stok['Marka'] == secilen_marka
-                        carpan = (1 + (yuzde / 100)) if islem_tipi == "Zam (+)" else (1 - (yuzde / 100))
-                        eski_fiyatlar = pd.to_numeric(df_stok.loc[mask, 'Fiyat'], errors='coerce').fillna(0)
-                        df_stok.loc[mask, 'Fiyat'] = (eski_fiyatlar * carpan).round(2).astype(str)
+                        
+                        # 🌟 100% GARANTİLİ MATEMATİK MOTORU
+                        if islem_tipi == "ZAM":
+                            carpan = 1.0 + (yuzde / 100.0)
+                        else:  # İNDİRİM
+                            carpan = 1.0 - (yuzde / 100.0)
+                            
+                        # Virgüllü fiyat girildiyse (örn: 15,50) hata vermesin diye noktaya çeviriyoruz
+                        fiyat_temiz = df_stok.loc[mask, 'Fiyat'].astype(str).str.replace(',', '.')
+                        eski_fiyatlar = pd.to_numeric(fiyat_temiz, errors='coerce').fillna(0.0)
+                        
+                        # Çarp ve kaydet
+                        df_stok.loc[mask, 'Fiyat'] = (eski_fiyatlar * carpan).apply(math.ceil).astype(str)
                         df_stok.loc[mask, 'Son_guncelleme_tarihi'] = su_an()
+                        
                         if kaydet(df_stok, df_user, df_musteri, df_satis):
                             st.session_state.df_stok = df_stok
-                            st.success(f"✅ Başarılı! {secilen_marka} grubundaki {mask.sum()} ürünün fiyatı güncellendi.")
+                            st.success(f"✅ Başarılı! {secilen_marka} grubundaki {mask.sum()} ürünün fiyatına %{yuzde} {islem_tipi} uygulandı.")
                             time.sleep(2); st.rerun()
             st.divider()
 
