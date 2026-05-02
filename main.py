@@ -249,8 +249,7 @@ with c_icerik:
                             yeni = pd.DataFrame([{"Barkod": barkod, "Urun_Adi": y_ad, "Marka": "Genel", "Fiyat": str(y_f), "Stok": str(y_s), "Son_satis_sayisi": "0", "Son_guncelleme_tarihi": su_an(), "Son_satis_tarihi": "", "Son_ekleme_tarihi": su_an()}])
                             df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                             if kaydet(df_stok, df_user, df_musteri, df_satis): st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
-
-       with col_sepet:
+        with col_sepet:
             st.markdown("### 🛍️ Sepet Alanı")
             st.divider()
             
