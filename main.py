@@ -250,7 +250,7 @@ with c_icerik:
                             df_stok = pd.concat([df_stok, yeni], ignore_index=True)
                             if kaydet(df_stok, df_user, df_musteri, df_satis): st.session_state.df_stok = df_stok; st.session_state.okunan_barkod = None; st.rerun()
 
-        with col_sepet:
+       with col_sepet:
             st.markdown("### 🛍️ Sepet Alanı")
             st.divider()
             
@@ -259,9 +259,28 @@ with c_icerik:
             else:
                 df_sepet = pd.DataFrame(st.session_state.sepet)
                 df_sepet['Toplam (TL)'] = df_sepet['Fiyat'] * df_sepet['Adet']
-                edited_sepet = st.data_editor(df_sepet, width="stretch", hide_index=True, disabled=["Barkod", "Urun_Adi", "Fiyat", "Toplam (TL)"], key="sepet_editor")
-                st.session_state.sepet = edited_sepet.drop(columns=['Toplam (TL)']).to_dict('records')
-                genel_toplam = edited_sepet['Toplam (TL)'].sum()
+                
+                # 🌟 BÜYÜ BURADA: Sepetin en başına "Sil" kutucuğu ekliyoruz
+                df_sepet.insert(0, "🗑️ Sil", False)
+                
+                # key değerini değiştirdik ki tablo hata vermeden kendini güncellesin
+                edited_sepet = st.data_editor(
+                    df_sepet, 
+                    width="stretch", 
+                    hide_index=True, 
+                    disabled=["Barkod", "Urun_Adi", "Toplam (TL)"], 
+                    key="sepet_editor_v2"
+                )
+                
+                # Sil kutucuğu işaretlenmemiş (False) olanları ayıkla
+                kalan_urunler = edited_sepet[edited_sepet["🗑️ Sil"] == False]
+                st.session_state.sepet = kalan_urunler.drop(columns=['Toplam (TL)', '🗑️ Sil']).to_dict('records')
+                
+                # Eğer silinen bir ürün olduysa ekranı saniyesinde yenile (Fiyat güncellensin)
+                if edited_sepet["🗑️ Sil"].any():
+                    st.rerun()
+                    
+                genel_toplam = kalan_urunler['Toplam (TL)'].sum()
                 
                 st.markdown(f"<div style='background-color:#161b22;padding:20px;border-radius:12px;border:2px solid #58a6ff;text-align:center;font-size:32px;font-weight:bold;'>Genel Toplam<br><span style='color:#58a6ff;'>{genel_toplam:,.2f} TL</span></div>", unsafe_allow_html=True)
                 
